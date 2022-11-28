@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:engine="UnityEngine.UIElements"
+>
+    <engine:VisualElement class="layout-no-shrink">
+        <engine:VisualElement class="window-title-bar layout-horizontal">
+            <engine:Button class="window-button-minimize window-button" text="▼" />
+            <engine:Label class="window-title move-hitbox layout-grow layout-shrink layout-text-align-middle-left" text="Title" />
+            <engine:Button class="window-button-maximize window-button" text="[ ]" />
+            <engine:Button class="window-button-close window-button" text="X" />
+        </engine:VisualElement>
+    </engine:VisualElement>
+
+    <engine:VisualElement class="window-inner-content" />
+    
+    <engine:VisualElement class="resize-vertical-hitbox" />
+    <engine:VisualElement class="resize-horizontal-hitbox" />
+    <engine:VisualElement class="resize-diagonal-hitbox" />
+</engine:UXML>

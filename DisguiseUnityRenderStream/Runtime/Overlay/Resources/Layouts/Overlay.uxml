@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:engine="UnityEngine.UIElements"
+>
+    <engine:Style src="../Styles/Overlay.uss" />
+    <engine:Style src="../Styles/OverlayRuntime.uss" />
+    
+    <engine:VisualElement name="windows=container" class="layout-grow">
+        <engine:Image name="background-image" class="layout-fullscreen fullscreen-image" />
+        
+        <Disguise.RenderStream.Overlay.Elements.Window name="main-window" title="RenderStream Overlay [F12 to toggle]" show-minimize-button="true" show-maximize-button="true" show-close-button="false" save-key="Disguise.RenderStream.Overlay.OutputStreams">
+            <Disguise.RenderStream.Overlay.Elements.ExtendedList name="output-streams" />
+        </Disguise.RenderStream.Overlay.Elements.Window>
+    </engine:VisualElement>
+</engine:UXML>
