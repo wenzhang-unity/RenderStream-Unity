@@ -3,9 +3,9 @@ using UnityEngine.UIElements;
 
 namespace Disguise.RenderStream.Overlay.Elements
 {
-    public class Resizeable
+    class Resizeable
     {
-        public static class Styles
+        static class Styles
         {
             public const string ResizeVerticalHitbox = "resize-vertical-hitbox";
             public const string ResizeHorizontalHitbox = "resize-horizontal-hitbox";

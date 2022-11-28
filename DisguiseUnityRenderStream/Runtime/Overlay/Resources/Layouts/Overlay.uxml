@@ -4,7 +4,6 @@
     xmlns:engine="UnityEngine.UIElements"
 >
     <engine:Style src="../Styles/Overlay.uss" />
-    <engine:Style src="../Styles/OverlayRuntime.uss" />
     
     <engine:VisualElement name="windows=container" class="layout-grow">
         <engine:Image name="background-image" class="layout-fullscreen fullscreen-image" />

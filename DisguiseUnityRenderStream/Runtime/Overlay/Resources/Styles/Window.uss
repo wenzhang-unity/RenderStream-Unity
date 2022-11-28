@@ -1,98 +1,9 @@
-/* Variables */
-
-* {
-    --text-color: white;
-    --text-color-inverse: black;
-    --panel-background-color: rgba(0, 0, 0, 0.75);
-    --window-title-bar-background-color: rgba(0, 0, 0, 0.9);
-    --window-title-bar-button-background-color: rgba(0, 0, 0, 0.75);
-    --window-inner-content-background-color: rgba(0, 0, 0, 0.75);
-    --scrollbar-background-color: transparent;
-    --slider-dragger-border-color: rgba(0, 0, 0, 0.9);
-    --extended-list-selection-background-color: black;
-    --panel-padding: 8px;
-    --slider-text-width: 32px;
-}
-
-
-/* Common */
-
-Label {
-    font-size: 12px;
-}
-
-Label {
-    color: var(--text-color);
-}
-
-
-/* Button */
-
-.small-action-button {
-    height: 16px;
-    margin: 2px 0px;
-    padding: 8px 4px;
-    
-    background-color: transparent;
-
-    border-color: var(--text-color);
-    border-width: 1px;
-    border-radius: 0px;
-
-    color: var(--text-color);
-    -unity-font-style: bold;
-    font-size: 12px;
-}
-
-.small-action-button:hover {
-    background-color: var(--text-color);
-    border-color: var(--text-color-inverse);
-    color: var(--text-color-inverse);
-}
-
-
-/* Extended list */
-
-.extended-list ListView {
-    min-height: 24px;
-}
-
-.extended-list-border {
-    margin: 4px;
-    padding: 3px;
-    
-    border-width: 1px;
-    border-color: var(--text-color);
-}
-
-.extended-list .unity-list-view__item {
-    height: 24px;
-    margin: 0px 0px;
-    padding: 0px 2px;
-    
-    font-size: 12px;
-    color: var(--text-color);
-    -unity-text-align: middle-left;
-}
-
-.extended-list .unity-list-view__item--selected,
-.extended-list .unity-list-view__item:hover,
-.extended-list .unity-list-view__item:focus,
-.extended-list .unity-list-view__item:active,
-.extended-list .unity-list-view__item:checked {
-    color: var(--text-color-inverse);
-    background-color: var(--text-color);
-}
-
-
-/* Window */
-
 .window {
     position: absolute;
-    
+
     min-width: 84px;
     min-height: 24px;
-    
+
     border-color: white;
     border-width: 1px;
 }
@@ -108,14 +19,14 @@ Label {
 .window-title-bar {
     height: 23px;
     border-bottom-width: 1px;
-    
+
     border-color: var(--text-color);
     background-color: var(--window-title-bar-background-color);
 }
 
 .window-title {
     padding-left: 4px;
-    
+
     overflow: hidden;
 
     font-size: 12px;
@@ -148,17 +59,17 @@ Label {
 
 .window-inner-content {
     flex-grow: 1;
-    
+
     background-color: var(--window-inner-content-background-color);
 }
 
 .resize-vertical-hitbox {
     position: absolute;
-    
+
     width: 100%;
     height: 10px;
     bottom: -8px;
-    
+
     background-color: transparent;
 
     cursor: url("../Images/VerticalResizeCursor.png") 16 16;
@@ -199,16 +110,4 @@ Label {
 .window-not-resizeable .resize-horizontal-hitbox,
 .window-not-resizeable .resize-diagonal-hitbox {
     display: none;
-}
-
-
-/* Texture list item */
-
-TextureListItem:hover *,
-TextureListItem:focus *,
-TextureListItem:active *,
-TextureListItem:checked * {
-    color: var(--text-color-inverse);
-    background-color: var(--text-color);
-    border-color: var(--text-color-inverse);
 }

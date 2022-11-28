@@ -3,7 +3,7 @@ using UnityEngine.UIElements;
 
 namespace Disguise.RenderStream.Overlay
 {
-    public class Moveable
+    class Moveable
     {
         public static class Styles
         {

@@ -1,0 +1,15 @@
+* {
+    --small-space: 2px;
+    --medium-space: 4px;
+    --text-color: white;
+    --text-color-inverse: black;
+    --panel-background-color: rgba(0, 0, 0, 0.75);
+    --window-title-bar-background-color: rgba(0, 0, 0, 0.9);
+    --window-title-bar-button-background-color: rgba(0, 0, 0, 0.75);
+    --window-inner-content-background-color: rgba(0, 0, 0, 0.75);
+    --scrollbar-background-color: transparent;
+    --slider-dragger-border-color: rgba(0, 0, 0, 0.9);
+    --extended-list-selection-background-color: black;
+    --panel-padding: 8px;
+    --slider-text-width: 32px;
+}

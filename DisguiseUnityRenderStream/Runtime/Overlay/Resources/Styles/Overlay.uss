@@ -1,70 +1,9 @@
-/* Variables */
-
-* {
-    --small-space: 2px;
-    --medium-space: 4px;
-}
-
-
-/* Layout utilities */
-
-.layout-fullscreen {
-    width: 100%;
-    height: 100%;
-}
-
-.layout-horizontal {
-    flex-direction: row;
-}
-
-.layout-shrink {
-    flex-shrink: 1;
-}
-
-.layout-no-shrink {
-    flex-shrink: 0;
-}
-
-.layout-grow {
-    flex-grow: 1;
-}
-
-.layout-align-start {
-    align-self: flex-start;
-}
-
-.layout-align-center {
-    align-self: center;
-}
-
-.layout-align-end {
-    align-self: flex-end;
-}
-
-.layout-text-align-middle-left {
-    -unity-text-align: middle-left;
-}
-
-.layout-small-vspace {
-    margin-top: var(--small-space);
-    margin-bottom: var(--small-space);
-}
-
-.layout-medium-vspace {
-    margin-top: var(--medium-space);
-    margin-bottom: var(--medium-space);
-}
-
-
-/* Extended list */
-
-.extended-list-border {
-    margin-top: var(--small-space);
-    margin-bottom: var(--small-space);
-}
-
-
-/* Image */
+@import url("Variables.uss");
+@import url("Core.uss");
+@import url("General.uss");
+@import url("ExtendedList.uss");
+@import url("TextureListItem.uss");
+@import url("Window.uss");
 
 .fullscreen-image {
     position: absolute;

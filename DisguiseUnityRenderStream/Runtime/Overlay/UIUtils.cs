@@ -2,7 +2,7 @@ using UnityEngine.UIElements;
 
 namespace Disguise.RenderStream.Overlay
 {
-    public static class UIUtils
+    static class UIUtils
     {
         public static void ShowElement(VisualElement element, bool show = true)
         {

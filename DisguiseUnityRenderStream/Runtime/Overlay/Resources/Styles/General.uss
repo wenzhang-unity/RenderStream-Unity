@@ -1,0 +1,34 @@
+/* Common */
+
+Label {
+    font-size: 12px;
+}
+
+Label {
+    color: var(--text-color);
+}
+
+
+/* Button */
+
+.small-action-button {
+    height: 16px;
+    margin: 2px 0px;
+    padding: 8px 4px;
+
+    background-color: transparent;
+
+    border-color: var(--text-color);
+    border-width: 1px;
+    border-radius: 0px;
+
+    color: var(--text-color);
+    -unity-font-style: bold;
+    font-size: 12px;
+}
+
+.small-action-button:hover {
+    background-color: var(--text-color);
+    border-color: var(--text-color-inverse);
+    color: var(--text-color-inverse);
+}

@@ -3,7 +3,7 @@ using UnityEngine.UIElements;
 
 namespace Disguise.RenderStream.Overlay.Elements
 {
-    public class ExtendedList : VisualElement
+    class ExtendedList : VisualElement
     {
         static class ResourcePaths
         {
@@ -16,10 +16,7 @@ namespace Disguise.RenderStream.Overlay.Elements
             public const string Border = "extended-list-border";
         }
 
-        public ListView List
-        {
-            get => m_List;
-        }
+        public ListView List => m_List;
 
         ListView m_List;
 

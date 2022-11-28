@@ -8,7 +8,7 @@ using Cursor = UnityEngine.Cursor;
 
 namespace Disguise.RenderStream.Overlay
 {
-    public class Overlay : MonoBehaviour
+    class Overlay : MonoBehaviour
     {
         sealed class TextureWindow : Window
         {
@@ -18,12 +18,14 @@ namespace Disguise.RenderStream.Overlay
                 set => m_Image.image = value;
             }
             
-            Image m_Image;
+            readonly Image m_Image;
             
-            public TextureWindow() : base()
+            public TextureWindow()
             {
-                m_Image = new Image();
-                m_Image.scaleMode = ScaleMode.ScaleToFit;
+                m_Image = new Image
+                {
+                    scaleMode = ScaleMode.ScaleToFit
+                };
                 m_Image.AddToClassList(Moveable.Styles.MoveHitbox);
                 m_Image.style.flexGrow = 1f;
                 m_Image.style.flexShrink = 1f;
@@ -70,7 +72,7 @@ namespace Disguise.RenderStream.Overlay
             }
         }
         
-        public const string OutputStreamNone = "None";
+        const string OutputStreamNone = "None";
 
         public bool ShowOnStart = true;
         
@@ -79,10 +81,10 @@ namespace Disguise.RenderStream.Overlay
         VisualElement m_WindowsContainer;
         Image m_BackgroundImage;
         ExtendedList m_OutputStreams;
-        List<TextureWindow> m_TextureWindows = new List<TextureWindow>();
+        readonly List<TextureWindow> m_TextureWindows = new List<TextureWindow>();
 
-        OverlayState m_State = new OverlayState();
-        List<string> m_OutputStreamNames = new List<string>();
+        readonly OverlayState m_State = new OverlayState();
+        readonly List<string> m_OutputStreamNames = new List<string>();
 
         void OnEnable()
         {
@@ -189,17 +191,17 @@ namespace Disguise.RenderStream.Overlay
         {
             foreach (var obj in selection)
             {
-                var name = obj as string;
-                if (TrySetStream(name))
+                var streamName = obj as string;
+                if (TrySetStream(streamName))
                 {
-                    m_State.SelectedStream = name;
+                    m_State.SelectedStream = streamName;
                 }
             }
         }
 
-        bool TrySetStream(string name)
+        bool TrySetStream(string streamName)
         {
-            if (name == OutputStreamNone)
+            if (streamName == OutputStreamNone)
             {
                 SetNoneStream();
                 return true;
@@ -207,7 +209,7 @@ namespace Disguise.RenderStream.Overlay
             
             foreach (var camera in Camera.allCameras)
             {
-                if (camera.name == name && camera.targetTexture != null)
+                if (camera.name == streamName && camera.targetTexture != null)
                 {
                     m_BackgroundImage.image = camera.targetTexture;
                     return true;
@@ -223,13 +225,13 @@ namespace Disguise.RenderStream.Overlay
             m_BackgroundImage.image = null;
         }
 
-        void InspectTexture(string name)
+        void InspectTexture(string streamName)
         {
             foreach (var camera in Camera.allCameras)
             {
                 var targetTexture = camera.targetTexture;
                 
-                if (camera.name == name && targetTexture != null)
+                if (camera.name == streamName && targetTexture != null)
                 {
                     var textureWindow = m_TextureWindows.Find(x => x.Texture == targetTexture);
 
@@ -240,10 +242,12 @@ namespace Disguise.RenderStream.Overlay
                     }
                     else
                     {
-                        textureWindow = new TextureWindow();
-                        textureWindow.Title = name;
-                        textureWindow.Texture = targetTexture;
-                        textureWindow.SaveKey = "Disguise.RenderStream.Overlay.Inspect." + name;
+                        textureWindow = new TextureWindow
+                        {
+                            Title = streamName,
+                            Texture = targetTexture,
+                            SaveKey = "Disguise.RenderStream.Overlay.Inspect." + streamName
+                        };
                         textureWindow.OnClose += () => CloseTextureWindow(textureWindow);
                         m_TextureWindows.Add(textureWindow);
                         

@@ -1,0 +1,30 @@
+.extended-list ListView {
+    min-height: 24px;
+}
+
+.extended-list-border {
+    margin: 4px;
+    padding: 3px;
+
+    border-width: 1px;
+    border-color: var(--text-color);
+}
+
+.extended-list .unity-list-view__item {
+    height: 24px;
+    margin: 0px 0px;
+    padding: 0px 2px;
+
+    font-size: 12px;
+    color: var(--text-color);
+    -unity-text-align: middle-left;
+}
+
+.extended-list .unity-list-view__item--selected,
+.extended-list .unity-list-view__item:hover,
+.extended-list .unity-list-view__item:focus,
+.extended-list .unity-list-view__item:active,
+.extended-list .unity-list-view__item:checked {
+    color: var(--text-color-inverse);
+    background-color: var(--text-color);
+}

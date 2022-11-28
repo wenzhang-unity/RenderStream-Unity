@@ -1,0 +1,8 @@
+TextureListItem:hover *,
+TextureListItem:focus *,
+TextureListItem:active *,
+TextureListItem:checked * {
+    color: var(--text-color-inverse);
+    background-color: var(--text-color);
+    border-color: var(--text-color-inverse);
+}

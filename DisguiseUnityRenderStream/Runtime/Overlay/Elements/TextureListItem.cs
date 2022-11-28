@@ -3,7 +3,7 @@ using UnityEngine.UIElements;
 
 namespace Disguise.RenderStream.Overlay.Elements
 {
-    public class TextureListItem : VisualElement
+    class TextureListItem : VisualElement
     {
         static class ResourcePaths
         {

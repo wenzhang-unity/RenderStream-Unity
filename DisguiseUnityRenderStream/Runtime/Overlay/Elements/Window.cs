@@ -4,7 +4,7 @@ using UnityEngine.UIElements;
 
 namespace Disguise.RenderStream.Overlay.Elements
 {
-    public class Window : VisualElement
+    class Window : VisualElement
     {
         static class ResourcePaths
         {
@@ -235,14 +235,8 @@ namespace Disguise.RenderStream.Overlay.Elements
             style.maxHeight = maxSize.y;
         }
 
-        public override VisualElement contentContainer
-        {
-            get
-            {
-                return m_InnerContent;
-            }
-        }
-        
+        public override VisualElement contentContainer => m_InnerContent;
+
         void Minimize()
         {
             var skipSaveHeight = false;
@@ -416,7 +410,7 @@ namespace Disguise.RenderStream.Overlay.Elements
             }
         }
         
-        class ViewData
+        static class ViewData
         {
             public static void Load(string key, Window window)
             {
