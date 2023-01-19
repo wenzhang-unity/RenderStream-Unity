@@ -164,6 +164,8 @@ namespace Disguise.RenderStream
                 else
                     fields.numerical.Add(field);
             }
+            
+            m_BurnIn = UnityEngine.Object.FindObjectOfType<DisguiseBurnIn>();
         }
 
         protected void CreateStreams()
@@ -438,6 +440,10 @@ namespace Disguise.RenderStream
             HasNewFrameData = (error == RS_ERROR.RS_ERROR_SUCCESS);
             if (HasNewFrameData)
             {
+                m_BurnIn.text =
+                    $"localTime: {LatestFrameData.localTime:F5}\n" +
+                    $"tTracked: {LatestFrameData.tTracked:F5}";
+                
                 ProcessFrameData(LatestFrameData);
             }
 
@@ -483,5 +489,7 @@ namespace Disguise.RenderStream
         
         SceneFields[] m_SceneFields;
         DisguiseRenderStreamSettings m_Settings;
+        
+        DisguiseBurnIn m_BurnIn;
     }
 }
