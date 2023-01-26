@@ -154,9 +154,11 @@
     <ClInclude Include="Logger.h" />
     <ClInclude Include="PublicAPI.h" />
     <ClInclude Include="Unity\IUnityGraphics.h" />
+    <ClInclude Include="Unity\IUnityGraphicsD3D11.h" />
     <ClInclude Include="Unity\IUnityGraphicsD3D12.h" />
     <ClInclude Include="Unity\IUnityInterface.h" />
     <ClInclude Include="Unity\IUnityLog.h" />
+    <ClInclude Include="Unity\IUnityRenderingExtensions.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

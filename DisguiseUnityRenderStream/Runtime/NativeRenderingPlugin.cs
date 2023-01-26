@@ -21,20 +21,24 @@ namespace Disguise.RenderStream
         
         public enum EventID
         {
-            GetFrameImage
+            GetFrameImage = 128
         }
 
         public struct GetFrameImageData
         {
             public IntPtr m_rs_getFrameImage;
             public Int64 m_ImageId;
-            public IntPtr m_Texture;
         }
         
 #if NATIVE_RENDERING_PLUGIN_AVAILABLE
-        public static IntPtr GetRenderEventCallback()
+        public static IntPtr GetRenderEventAndDataCallback()
         {
-            return NativeRenderingPluginNative.GetRenderEventCallback();
+            return NativeRenderingPluginNative.GetRenderEventAndDataCallback();
+        }
+        
+        public static IntPtr GetCustomBlitCallback()
+        {
+            return NativeRenderingPluginNative.GetCustomBlitCallback();
         }
         
         public static bool IsInitialized()
@@ -69,7 +73,12 @@ namespace Disguise.RenderStream
             return IntPtr.Zero;
         }
 #else
-        public static IntPtr GetRenderEventCallback()
+        public static IntPtr GetRenderEventAndDataCallback()
+        {
+            return IntPtr.Zero;
+        }
+
+        public static IntPtr GetCustomBlitCallback()
         {
             return IntPtr.Zero;
         }
@@ -102,7 +111,10 @@ namespace Disguise.RenderStream
         const string PluginName = "NativeRenderingPlugin";
         
         [DllImport(PluginName)]
-        public static extern IntPtr GetRenderEventCallback();
+        public static extern IntPtr GetRenderEventAndDataCallback();
+        
+        [DllImport(PluginName)]
+        public static extern IntPtr GetCustomBlitCallback();
         
         [DllImport(PluginName)]
         public static extern bool IsInitialized();

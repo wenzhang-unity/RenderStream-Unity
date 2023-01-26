@@ -6,6 +6,7 @@ using System.Threading;
 using Disguise.RenderStream.Utils;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.PlayerLoop;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
@@ -249,8 +250,6 @@ namespace Disguise.RenderStream
             Awaiting = false;
         }
     
-        readonly List<Texture2D> m_ScratchTextures = new ();
-    
         protected void ProcessFrameData(in FrameData receivedFrameData)
         {
             if (receivedFrameData.scene >= m_Schema.scenes.Length) return;
@@ -419,59 +418,52 @@ namespace Disguise.RenderStream
             using var imageData = new NativeArray<ImageFrameData>(nImageParameters, Allocator.Temp);
             if (PluginEntry.instance.GetFrameImageData(spec.hash, imageData.AsSpan()) != RS_ERROR.RS_ERROR_SUCCESS)
                 return;
-            
-            while (m_ScratchTextures.Count < imageData.Length)
-            {
-                var index = m_ScratchTextures.Count;
-                
-                m_ScratchTextures.Add(new Texture2D(
-                    (int)imageData[index].width,
-                    (int)imageData[index].height,
-                    PluginEntry.ToTextureFormat(imageData[index].format),
-                    false,
-                    true));
-            }
 
             var i = 0;
             foreach (var field in images)
             {
                 if (field.GetValue() is RenderTexture renderTexture)
                 {
-                    Texture2D texture = m_ScratchTextures[i];
-                    if (texture.width != imageData[i].width ||
-                        texture.height != imageData[i].height ||
-                        texture.format != PluginEntry.ToTextureFormat(imageData[i].format))
-                    {
-                        m_ScratchTextures[i] = new Texture2D(
-                            (int)imageData[i].width,
-                            (int)imageData[i].height,
-                            PluginEntry.ToTextureFormat(imageData[i].format), 
-                            false,
-                            true);
-                        
-                        texture = m_ScratchTextures[i];
-                    }
-                    
                     var cmd = CommandBufferPool.Get($"Receiving Disguise Image Parameter '{field.info.Name}'");
+
+                    var format = GraphicsFormatUtility.GetGraphicsFormat(PluginEntry.ToTextureFormat(imageData[i].format), false);
+                    cmd.GetTemporaryRT(
+                        s_ScratchTextureID,
+                        (int)imageData[i].width,
+                        (int)imageData[i].height,
+                        0,
+                        FilterMode.Bilinear,
+                        format
+                    );
                     
                     NativeRenderingPlugin.GetFrameImageData data = new NativeRenderingPlugin.GetFrameImageData()
                     {
                         m_rs_getFrameImage = PluginEntry.instance.rs_getFrameImage_ptr,
-                        m_ImageId = imageData[i].imageId,
-                        m_Texture = texture.GetNativeTexturePtr()
+                        m_ImageId = imageData[i].imageId
                     };
                     
                     // TODO fix leak, this only needs to be valid for the duration of a (render thread) frame
                     var handle = GCHandle.Alloc(data, GCHandleType.Pinned);
                     
                     cmd.IssuePluginEventAndData(
-                        NativeRenderingPlugin.GetRenderEventCallback(),
+                        NativeRenderingPlugin.GetRenderEventAndDataCallback(),
                         (int)NativeRenderingPlugin.EventID.GetFrameImage,
                         handle.AddrOfPinnedObject());
-                    cmd.IncrementUpdateCount(texture);
                     
-                    cmd.Blit(texture, renderTexture, new Vector2(1.0f, -1.0f), new Vector2(0.0f, 1.0f));
+                    cmd.IssuePluginCustomBlit(
+                        NativeRenderingPlugin.GetCustomBlitCallback(), 
+                        (uint)NativeRenderingPlugin.EventID.GetFrameImage,
+                        s_ScratchTextureID,
+                        s_ScratchTextureID, // placeholder
+                        0,
+                        0
+                    );
+                    cmd.IncrementUpdateCount(s_ScratchTextureID);
+                    
+                    cmd.Blit(s_ScratchTextureID, renderTexture, new Vector2(1.0f, -1.0f), new Vector2(0.0f, 1.0f));
                     cmd.IncrementUpdateCount(renderTexture);
+                    
+                    cmd.ReleaseTemporaryRT(s_ScratchTextureID);
                     
                     context.ExecuteCommandBuffer(cmd);
                     
@@ -521,5 +513,7 @@ namespace Disguise.RenderStream
         
         SceneFields[] m_SceneFields;
         DisguiseRenderStreamSettings m_Settings;
+
+        static readonly int s_ScratchTextureID = Shader.PropertyToID("Disguise input scratch texture");
     }
 }

@@ -52,5 +52,11 @@
     <ClInclude Include="Events.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="Unity\IUnityRenderingExtensions.h">
+      <Filter>Unity</Filter>
+    </ClInclude>
+    <ClInclude Include="Unity\IUnityGraphicsD3D11.h">
+      <Filter>Unity</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

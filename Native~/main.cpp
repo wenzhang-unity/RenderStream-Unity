@@ -1,7 +1,10 @@
 #include "PublicAPI.h"
 
+#include "stdint.h"
+
 #include "Unity/IUnityInterface.h"
 #include "Unity/IUnityGraphics.h"
+#include "Unity/IUnityRenderingExtensions.h"
 
 #include "Events.h"
 #include "Logger.h"
@@ -49,9 +52,17 @@ OnGraphicsDeviceEvent(UnityGfxDeviceEventType eventType)
     {
         case kUnityGfxDeviceEventInitialize:
         {
-            if (s_Graphics != nullptr && s_Graphics->GetRenderer() == kUnityGfxRendererD3D12)
+            if (s_Graphics != nullptr)
             {
-                s_DX12System = std::make_unique<DX12System>(s_UnityInterfaces);
+                if (s_Graphics->GetRenderer() == kUnityGfxRendererD3D12)
+                {
+                    s_DX12System = std::make_unique<DX12System>(s_UnityInterfaces);
+                }
+
+                if (s_Graphics->GetRenderer() != kUnityGfxRendererNull)
+                {
+                    s_EventProcessor = std::make_unique<EventProcessor>(s_UnityInterfaces);
+                }
             }
 
             break;
@@ -59,6 +70,7 @@ OnGraphicsDeviceEvent(UnityGfxDeviceEventType eventType)
         case kUnityGfxDeviceEventShutdown:
         {
             s_DX12System.reset();
+            s_EventProcessor.reset();
 
             break;
         }
@@ -73,29 +85,43 @@ OnGraphicsDeviceEvent(UnityGfxDeviceEventType eventType)
     };
 }
 
-// Render event (via IssuePluginEvent) callback
+// IssuePluginEvent callback
 static void UNITY_INTERFACE_API
-OnRenderEvent(int eventID, void* eventData)
+OnRenderEventAndData(int eventID, void* data)
 {
-    if (eventID == (int)NativeRenderingPlugin::EventID::GET_FRAME_IMAGE)
+    if (eventID >= (unsigned int)NativeRenderingPlugin::EventID::USER_EVENTS_START &&
+        eventID <= (unsigned int)NativeRenderingPlugin::EventID::USER_EVENTS_END)
     {
-        auto data = reinterpret_cast<const NativeRenderingPlugin::GetFrameImageData*>(eventData);
-        auto result = data->Execute();
-        if (result != RS_ERROR_SUCCESS)
-        {
-            s_Logger->LogError("EventID::GET_FRAME_IMAGE error", result);
-        }
-    }
-    else
-    {
-        s_Logger->LogError("Unsupported event ID", eventID);
+        s_EventProcessor->ProcessEventAndData(eventID, data);
     }
 }
 
 extern "C" UnityRenderingEventAndData UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API
-GetRenderEventCallback()
+GetRenderEventAndDataCallback()
 {
-    return OnRenderEvent;
+    return OnRenderEventAndData;
+}
+
+// IssuePluginCustomBlit callback
+static void UNITY_INTERFACE_API
+OnCustomBlit(unsigned int command, UnityRenderingExtCustomBlitParams* data)
+{
+    if (command != kUnityRenderingExtEventCustomBlit)
+        return;
+
+    if (data->command >= (unsigned int)NativeRenderingPlugin::EventID::USER_EVENTS_START &&
+        data->command <= (unsigned int)NativeRenderingPlugin::EventID::USER_EVENTS_END)
+    {
+        s_EventProcessor->ProcessCustomBlit(data->command, data);
+    }
+}
+
+typedef void(UNITY_INTERFACE_API* UnityRenderingCustomBlit)(unsigned int command, UnityRenderingExtCustomBlitParams* data);
+
+extern "C" UnityRenderingCustomBlit UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API
+GetCustomBlitCallback()
+{
+    return OnCustomBlit;
 }
 
 extern "C" bool UNITY_INTERFACE_EXPORT
