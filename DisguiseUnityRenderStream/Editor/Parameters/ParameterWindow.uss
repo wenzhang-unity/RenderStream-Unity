@@ -1,0 +1,104 @@
+.horizontal-container
+{
+    flex-direction: row;
+}
+
+#create-button
+{
+    flex-shrink: 0;
+}
+
+#create-button > TextElement
+{
+    background-image: resource("d_CreateAddNew@2x");
+    width: 16px;
+    height: 16px;
+}
+
+#scene-name-label
+{
+    flex-grow: 1;
+    
+    align-self: center;
+    margin: 4px 2px;
+    
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+}
+
+#patch-schema-button
+{
+    flex-shrink: 0;
+    
+    -unity-text-align: middle-center;
+}
+
+#disguise-settings-button
+{
+    flex-grow: 0;
+    flex-shrink: 0;
+
+    width: var(--unity-metrics-toolbar_button-height);
+    
+    background-image: resource("d__Popup@2x");
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+#create-parameter-list-section
+{
+    flex-grow: 1;
+    
+    align-self: center;
+    justify-content: center;
+}
+
+#create-parameter-list-button
+{
+    flex-grow: 0;
+    
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: var(--unity-metrics-single_line_small-height);
+
+    height: 24px;
+    padding: 8px 16px;
+}
+
+#extra-parameter-list-section
+{
+    flex-grow: 1;
+
+    align-self: center;
+    justify-content: center;
+}
+
+.extra-instance-list-view
+{
+    flex-grow: 0;
+    flex-shrink: 0;
+
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: var(--unity-metrics-single_line_small-height);
+}
+
+.extra-instance-list-view .unity-list-view__item:hover
+{
+    background-color: var(--unity-colors-button-background-hover);
+}
+
+.extra-instance-list-view .unity-list-view__item:active
+{
+    background-color: var(--unity-colors-button-background-pressed);
+}
+
+#tree-view-search-field
+{
+    flex-shrink: 1;
+}
+
+#tree-view-container
+{
+    flex-shrink: 0;
+    flex-grow: 1;
+}

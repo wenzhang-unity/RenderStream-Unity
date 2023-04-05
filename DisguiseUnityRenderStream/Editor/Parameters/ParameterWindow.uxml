@@ -1,0 +1,22 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" editor-extension-mode="True">
+    <uie:Toolbar>
+        <uie:ToolbarMenu name="create-button" tabindex="-1" display-tooltip-when-elided="true" />
+        <uie:ToolbarSearchField name="tree-view-search-field" focusable="true" />
+        <ui:Label name="scene-name-label"/>
+        <uie:ToolbarButton name="patch-schema-button" text="Patch Schema" />
+        <uie:ToolbarButton name="disguise-settings-button"/>
+    </uie:Toolbar>
+    
+    <ui:VisualElement name="create-parameter-list-section">
+        <ui:Label name="create-parameter-list-label" text="Create a Disguise Parameter List instance to add remote parameters to this scene." />
+        <ui:VisualElement class="horizontal-container">
+            <ui:Button name="create-parameter-list-button" text="Create" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="extra-parameter-list-section">
+        <ui:Label name="extra-parameter-list-label" text="Only a single Disguise Parameter List is expected in the scene, found:" />
+        <Disguise.RenderStream.Parameters.ExtraInstanceListView name="extra-parameter-list-names" class="horizontal-container" />
+    </ui:VisualElement>
+    <ui:IMGUIContainer name="tree-view-container" />
+</ui:UXML>

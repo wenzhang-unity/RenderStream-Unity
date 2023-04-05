@@ -1,0 +1,31 @@
+#highlight-button > VisualElement {
+    background-image: resource('Search On Icon');
+    -unity-background-scale-mode: scale-to-fit;
+    width: 16px;
+    height: 16px;
+    margin: auto;
+}
+
+.readonly-textfield > #unity-text-input {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+
+.override-block {
+    flex-direction: row;
+}
+
+.override-block > Toggle {
+    align-self: flex-end;
+    margin-top: 0;
+    margin-bottom: 1px;
+}
+
+.override-block > .override-block-container {
+    flex-shrink: 1;
+    flex-grow: 1;
+}
+
+.override-block .unity-base-field__label {
+    min-width: 100px;
+}

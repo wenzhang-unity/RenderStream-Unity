@@ -1,0 +1,38 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" editor-extension-mode="True">
+    <Style src="project://database/Assets/RenderStream-Unity/DisguiseUnityRenderStream/Editor/Parameters/ParameterEditor.uss?fileID=7433441132597879392&amp;guid=19ac3c3c963751e4da1c4899f39870de&amp;type=3#ParameterEditor" />
+    <ui:VisualElement name="common-section">
+        <ui:Button display-tooltip-when-elided="true" name="highlight-button">
+            <ui:VisualElement />
+        </ui:Button>
+        <ui:TextField picking-mode="Ignore" label="Binding" value="Light.color" readonly="true" class="readonly-textfield" />
+        <ui:TextField picking-mode="Ignore" label="Type" value="Vector3" readonly="true" class="readonly-textfield" />
+        <ui:Toggle label="Read Only" name="read-only-toggle" />
+    </ui:VisualElement>
+    <ui:VisualElement name="numeric-section">
+        <ui:VisualElement name="float-minmax-section">
+            <Disguise.RenderStream.Parameters.OverrideBlock name="min-override">
+                <ui:FloatField label="Minimum" value="0" />
+            </Disguise.RenderStream.Parameters.OverrideBlock>
+            <Disguise.RenderStream.Parameters.OverrideBlock name="max-override">
+                <ui:FloatField label="Maximum" value="1" />
+            </Disguise.RenderStream.Parameters.OverrideBlock>
+        </ui:VisualElement>
+        <ui:VisualElement name="int-minmax-section">
+            <Disguise.RenderStream.Parameters.OverrideBlock name="min-override">
+                <ui:IntegerField label="Minimum" value="0" />
+            </Disguise.RenderStream.Parameters.OverrideBlock>
+            <Disguise.RenderStream.Parameters.OverrideBlock name="max-override">
+                <ui:IntegerField label="Maximum" value="1" />
+            </Disguise.RenderStream.Parameters.OverrideBlock>
+        </ui:VisualElement>
+        <ui:VisualElement name="step-section">
+            <Disguise.RenderStream.Parameters.OverrideBlock name="step-override">
+                <ui:FloatField label="Step" value="0.01" />
+            </Disguise.RenderStream.Parameters.OverrideBlock>
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="options-section">
+        <ui:Label tabindex="-1" text="Choices:" display-tooltip-when-elided="true" class="unity-base-field" />
+        <ui:ListView focusable="true" name="options-list" />
+    </ui:VisualElement>
+</ui:UXML>

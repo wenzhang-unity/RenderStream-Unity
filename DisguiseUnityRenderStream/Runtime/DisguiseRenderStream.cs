@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Disguise.RenderStream.Parameters;
 using Disguise.RenderStream.Utils;
 using Unity.Collections;
 using UnityEngine;
@@ -68,7 +69,7 @@ namespace Disguise.RenderStream
         {
             if (schema != null)
             {
-                m_SceneFields = new SceneFields[schema.scenes.Length];
+                m_SceneData = new SceneData[schema.scenes.Length];
             }
             else
             {
@@ -78,100 +79,31 @@ namespace Disguise.RenderStream
                 schema.scenes[0] = new ManagedRemoteParameters();
                 schema.scenes[0].name = "Default";
                 schema.scenes[0].parameters = new ManagedRemoteParameter[0];
-                m_SceneFields = new SceneFields[schema.scenes.Length];
+                m_SceneData = new SceneData[1];
                 CreateStreams();
             }
+            
             m_Schema = schema;
             m_Settings = DisguiseRenderStreamSettings.GetOrCreateSettings();
+            
+            for (var i = 0; i < m_SceneData.Length; i++)
+            {
+                m_SceneData[i] = new SceneData();
+            }
         }
 
         void OnSceneLoaded(Scene loadedScene, LoadSceneMode mode)
         {
             if (DisguiseRenderStreamSettings.GetOrCreateSettings().enableUnityDebugWindowPresenter)
             {
-                GameObject.Instantiate(UnityDebugWindowPresenter.LoadPrefab());
+                // TODO fix presenter remote parameters
+                // GameObject.Instantiate(UnityDebugWindowPresenter.LoadPrefab());
             }
             
             CreateStreams();
-            int sceneIndex = 0;
-            DisguiseRenderStreamSettings settings = DisguiseRenderStreamSettings.GetOrCreateSettings();
-            switch (settings.sceneControl)
-            {
-                case DisguiseRenderStreamSettings.SceneControl.Selection:
-                    sceneIndex = loadedScene.buildIndex;
-                    break;
-            }
-            DisguiseRemoteParameters[] remoteParameters = UnityEngine.Object.FindObjectsByType(typeof(DisguiseRemoteParameters), FindObjectsSortMode.None) as DisguiseRemoteParameters[];
-            ManagedRemoteParameters scene = m_Schema.scenes[sceneIndex];
-            m_SceneFields[sceneIndex] = new SceneFields{ numerical = new List<ObjectField>(), images = new List<ObjectField>(), texts = new List<ObjectField>() };
-            SceneFields fields = m_SceneFields[sceneIndex];
-            for (int j = 0; j < scene.parameters.Length;)
-            {
-                ManagedRemoteParameter managedParameter = scene.parameters[j];
-                string key = managedParameter.key;
-                DisguiseRemoteParameters remoteParams = Array.Find(remoteParameters, rp => key.StartsWith(rp.prefix));
-                ObjectField field = new ObjectField();
-                field.target = remoteParams.exposedObject;
-                
-                if (key.EndsWith("_x"))
-                {
-                    string baseKey = key.Substring(0, key.Length - 2);
-                    field.info = remoteParams.GetMemberInfoFromManagedParameter(managedParameter);
-                    Type fieldType = field.FieldType;
-                    if ((fieldType == typeof(Vector2) || fieldType == typeof(Vector2Int)) &&
-                        j + 1 < scene.parameters.Length && scene.parameters[j + 1].key == baseKey + "_y")
-                    {
-                        j += 2;
-                    }
-                    else if ((fieldType == typeof(Vector3) || fieldType == typeof(Vector3Int) || fieldType == typeof(Quaternion)) &&
-                             j + 2 < scene.parameters.Length && scene.parameters[j + 1].key == baseKey + "_y" && scene.parameters[j + 2].key == baseKey + "_z")
-                    {
-                        j += 3;
-                    }
-                    else if (fieldType == typeof(Vector4) &&
-                             j + 3 < scene.parameters.Length && scene.parameters[j + 1].key == baseKey + "_y" && scene.parameters[j + 2].key == baseKey + "_z" && scene.parameters[j + 3].key == baseKey + "_w")
-                    {
-                        j += 4;
-                    }
-                    else
-                    {
-                        field.info = null;
-                    }
-                }
-                else if (key.EndsWith("_r"))
-                {
-                    string baseKey = key.Substring(0, key.Length - 2);
-                    field.info = remoteParams.GetMemberInfoFromManagedParameter(managedParameter);
-                    Type fieldType = field.FieldType;
-                    if (fieldType == typeof(Color) &&
-                        j + 3 < scene.parameters.Length && scene.parameters[j + 1].key == baseKey + "_g" && scene.parameters[j + 2].key == baseKey + "_b" && scene.parameters[j + 3].key == baseKey + "_a")
-                    {
-                        j += 4;
-                    }
-                    else
-                    {
-                        field.info = null;
-                    }
-                }
-                
-                if (field.info == null)
-                {
-                    field.info = remoteParams.GetMemberInfoFromManagedParameter(managedParameter);
-                    ++j;
-                }
-                
-                if (field.info == null)
-                {
-                    Debug.LogError("Unhandled remote parameter: " + key);
-                }
-
-                if (field.FieldType == typeof(Texture))
-                    fields.images.Add(field);
-                else if (field.FieldType == typeof(String) || field.FieldType == typeof(String[]))
-                    fields.texts.Add(field);
-                else
-                    fields.numerical.Add(field);
-            }
+            
+            if (DisguiseParameterList.FindInstance() is { } parameterList)
+                m_RemoteParameters = parameterList.GetRemoteParameterWrappers();
             
             SceneLoaded?.Invoke();
         }
@@ -264,125 +196,44 @@ namespace Disguise.RenderStream
     
         protected void ProcessFrameData(in FrameData receivedFrameData)
         {
-            if (receivedFrameData.scene >= m_Schema.scenes.Length) return;
+            if (receivedFrameData.scene >= m_Schema.scenes.Length)
+                return;
         
-            ManagedRemoteParameters spec = m_Schema.scenes[receivedFrameData.scene];
-            SceneFields fields = m_SceneFields[receivedFrameData.scene];
-            int nNumericalParameters = 0;
-            int nTextParameters = 0;
-            for (int i = 0; i < spec.parameters.Length; ++i)
+            var spec = m_Schema.scenes[receivedFrameData.scene];
+            var sceneData = m_SceneData[receivedFrameData.scene];
+            var numNumericalParameters = 0;
+            var numTextParameters = 0;
+            
+            foreach (var parameter in spec.parameters)
             {
-                if (spec.parameters[i].type == RemoteParameterType.RS_PARAMETER_NUMBER)
-                    ++nNumericalParameters;
-                else if (spec.parameters[i].type == RemoteParameterType.RS_PARAMETER_POSE || spec.parameters[i].type == RemoteParameterType.RS_PARAMETER_TRANSFORM)
-                    nNumericalParameters += 16;
-                else if (spec.parameters[i].type == RemoteParameterType.RS_PARAMETER_TEXT)
-                    ++nTextParameters;
+                if (parameter.type == RemoteParameterType.RS_PARAMETER_NUMBER)
+                    ++numNumericalParameters;
+                else if (parameter.type == RemoteParameterType.RS_PARAMETER_POSE || parameter.type == RemoteParameterType.RS_PARAMETER_TRANSFORM)
+                    numNumericalParameters += 16;
+                else if (parameter.type == RemoteParameterType.RS_PARAMETER_TEXT)
+                    ++numTextParameters;
+                else
+                    throw new NotSupportedException();
             }
 
-            using var parameters = new NativeArray<float>(nNumericalParameters, Allocator.Temp);
+            using var parameters = new NativeArray<float>(numNumericalParameters, Allocator.Temp);
             if (PluginEntry.instance.GetFrameParameters(spec.hash, parameters.AsSpan()) == RS_ERROR.RS_ERROR_SUCCESS)
             {
-                if (fields.numerical != null)
+                sceneData.CPUData.Numeric.SetData(parameters.GetEnumerator(), parameters.Length);
+
+                sceneData.CPUData.Text.Reserve(numTextParameters);
+                for (uint i = 0; i < numTextParameters; i++)
                 {
-                    int i = 0;
-                    foreach (var field in fields.numerical)
-                    {
-                        Type fieldType = field.FieldType;
-                        if (fieldType.IsEnum)
-                        {
-                            field.SetValue(Enum.ToObject(fieldType, Convert.ToUInt64(parameters[i])));
-                            ++i;
-                        }
-                        else if (fieldType == typeof(Vector2))
-                        {
-                            Vector2 v = new Vector2(parameters[i + 0], parameters[i + 1]);
-                            field.SetValue(v);
-                            i += 2;
-                        }
-                        else if (fieldType == typeof(Vector2Int))
-                        {
-                            Vector2Int v = new Vector2Int((int)parameters[i + 0], (int)parameters[i + 1]);
-                            field.SetValue(v);
-                            i += 2;
-                        }
-                        else if (fieldType == typeof(Vector3))
-                        {
-                            Vector3 v = new Vector3(parameters[i + 0], parameters[i + 1], parameters[i + 2]);
-                            field.SetValue(v);
-                            i += 3;
-                        }
-                        else if (fieldType == typeof(Vector3Int))
-                        {
-                            Vector3Int v = new Vector3Int((int)parameters[i + 0], (int)parameters[i + 1], (int)parameters[i + 2]);
-                            field.SetValue(v);
-                            i += 3;
-                        }
-                        else if (fieldType == typeof(Vector4))
-                        {
-                            Vector4 v = new Vector4(parameters[i + 0], parameters[i + 1], parameters[i + 2], parameters[i + 3]);
-                            field.SetValue(v);
-                            i += 4;
-                        }
-                        else if (fieldType == typeof(Quaternion))
-                        {
-                            Vector3 euler = new Vector3(parameters[i + 0], parameters[i + 1], parameters[i + 2]);
-                            Quaternion q = Quaternion.Euler(euler);
-                            field.SetValue(q);
-                            i += 3;
-                        }
-                        else if (fieldType == typeof(Color))
-                        {
-                            Color v = new Color(parameters[i + 0], parameters[i + 1], parameters[i + 2], parameters[i + 3]);
-                            field.SetValue(v);
-                            i += 4;
-                        }
-                        else if (fieldType == typeof(Transform))
-                        {
-                            Matrix4x4 m = new Matrix4x4();
-                            m.SetColumn(0, new Vector4(parameters[i + 0], parameters[i + 1], parameters[i + 2], parameters[i + 3]));
-                            m.SetColumn(1, new Vector4(parameters[i + 4], parameters[i + 5], parameters[i + 6], parameters[i + 7]));
-                            m.SetColumn(2, new Vector4(parameters[i + 8], parameters[i + 9], parameters[i + 10], parameters[i + 11]));
-                            m.SetColumn(3, new Vector4(parameters[i + 12], parameters[i + 13], parameters[i + 14], parameters[i + 15]));
-                            Transform transform = field.GetValue() as Transform;
-                            transform.localPosition = new Vector3(m[0, 3], m[1, 3], m[2, 3]);
-                            transform.localScale = m.lossyScale;
-                            transform.localRotation = m.rotation;
-                            i += 16;
-                        }
-                        else if (fieldType == typeof(float))
-                        {
-                            field.SetValue(parameters[i]);
-                            ++i;
-                        }
-                        else
-                        {
-                            if (field.info != null)
-                                field.SetValue(Convert.ChangeType(parameters[i], fieldType));
-                            ++i;
-                        }
-                    }
+                    var value = "";
+                    if (PluginEntry.instance.getFrameText(spec.hash, i, ref value) == RS_ERROR.RS_ERROR_SUCCESS)
+                        sceneData.CPUData.Text.SetValue((int)i, value);
                 }
-
-                if (fields.texts != null)
+                
+                foreach (var remoteParameter in m_RemoteParameters)
                 {
-                    uint i = 0;
-                    foreach (var field in fields.texts)
-                    {
-                        string text = "";
-                        if (PluginEntry.instance.getFrameText(spec.hash, i, ref text) == RS_ERROR.RS_ERROR_SUCCESS)
-                        {
-                            if (field.FieldType == typeof(String[]))
-                                field.SetValue(text.Split(' '));
-                            else
-                                field.SetValue(text);
-                        }
-                    }
-
-                    ++i;
+                    remoteParameter.ApplyData(sceneData.CPUData);
                 }
             }
-
         }
     
         protected void AwaitFrame()
@@ -418,88 +269,90 @@ namespace Disguise.RenderStream
         // Updates the RenderTextures assigned to image parameters on the render thread to avoid stalling the main thread
         void OnBeginContextRendering(ScriptableRenderContext context, List<Camera> cameras)
         {
-            if (!HasNewFrameData)
-                return;
+            // TODO fix live texture parameters
             
-            if (LatestFrameData.scene >= m_Schema.scenes.Length)
-                return;
-        
-            var spec = m_Schema.scenes[LatestFrameData.scene];
-            var images = m_SceneFields[LatestFrameData.scene].images;
-            if (images == null)
-                return;
-
-            // Only run once per frame for the main render context
-            if (m_HasUpdatedLiveTexturesThisFrame)
-                return;
-            foreach (var camera in cameras)
-            {
-                if (camera.cameraType != CameraType.Game)
-                    return;
-            }
-            m_HasUpdatedLiveTexturesThisFrame = true;
-            
-            var nImageParameters = spec.parameters.Count(t => t.type == RemoteParameterType.RS_PARAMETER_IMAGE);
-
-            using var imageData = new NativeArray<ImageFrameData>(nImageParameters, Allocator.Temp);
-            if (PluginEntry.instance.GetFrameImageData(spec.hash, imageData.AsSpan()) != RS_ERROR.RS_ERROR_SUCCESS)
-                return;
-
-            CommandBuffer cmd = null;
-            var i = 0;
-            foreach (var field in images)
-            {
-                if (field.GetValue() is RenderTexture renderTexture)
-                {
-                    // We may be temped to use RenderTexture instead of Texture2D for the shared textures.
-                    // RenderTextures are always stored as typeless texture resources though, which aren't supported
-                    // by CUDA interop (used by Disguise under the hood):
-                    // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__D3D11.html#group__CUDART__D3D11_1g85d07753780643584b8febab0370623b
-                    // Texture2D apply their GraphicsFormat to their texture resources.
-
-                    var sharedTexture = TemporaryTexture2DManager.Instance.Get(new Texture2DDescriptor()
-                    {
-                        Width = (int)imageData[i].width,
-                        Height = (int)imageData[i].height,
-                        Format = imageData[i].format,
-                        Linear = true
-                    });
-
-                    NativeRenderingPlugin.InputImageData data = new NativeRenderingPlugin.InputImageData()
-                    {
-                        m_rs_getFrameImage = PluginEntry.instance.rs_getFrameImage_ptr,
-                        m_ImageId = imageData[i].imageId,
-                        m_Texture = sharedTexture.GetNativeTexturePtr()
-                    };
-
-                    if (NativeRenderingPlugin.InputImageDataPool.TryPreserve(data, out var dataPtr))
-                    {
-                        if (cmd == null)
-                            cmd = CommandBufferPool.Get($"Receiving Disguise Image Parameters");
-
-                        cmd.IssuePluginEventAndData(
-                            NativeRenderingPlugin.GetRenderEventCallback(),
-                            NativeRenderingPlugin.GetEventID(NativeRenderingPlugin.EventID.InputImage),
-                            dataPtr);
-                        cmd.IncrementUpdateCount(sharedTexture);
-
-                        cmd.Blit(sharedTexture, renderTexture, new Vector2(1.0f, -1.0f), new Vector2(0.0f, 1.0f));
-                        cmd.IncrementUpdateCount(renderTexture);
-                    }
-                    else
-                    {
-                        Debug.LogError($"DisguiseRenderStream: {nameof(NativeRenderingPlugin)}.{nameof(NativeRenderingPlugin.InputImageData)} pool exceeded, skipping input texture '{field.info.Name}'");
-                    }
-                }
-
-                ++i;
-            }
-
-            if (cmd != null)
-            {
-                context.ExecuteCommandBuffer(cmd);
-                CommandBufferPool.Release(cmd);
-            }
+            // if (!HasNewFrameData)
+            //     return;
+            //
+            // if (LatestFrameData.scene >= m_Schema.scenes.Length)
+            //     return;
+            //
+            // var spec = m_Schema.scenes[LatestFrameData.scene];
+            // var images = m_SceneFields[LatestFrameData.scene].images;
+            // if (images == null)
+            //     return;
+            //
+            // // Only run once per frame for the main render context
+            // if (m_HasUpdatedLiveTexturesThisFrame)
+            //     return;
+            // foreach (var camera in cameras)
+            // {
+            //     if (camera.cameraType != CameraType.Game)
+            //         return;
+            // }
+            // m_HasUpdatedLiveTexturesThisFrame = true;
+            //
+            // var nImageParameters = spec.parameters.Count(t => t.type == RemoteParameterType.RS_PARAMETER_IMAGE);
+            //
+            // using var imageData = new NativeArray<ImageFrameData>(nImageParameters, Allocator.Temp);
+            // if (PluginEntry.instance.GetFrameImageData(spec.hash, imageData.AsSpan()) != RS_ERROR.RS_ERROR_SUCCESS)
+            //     return;
+            //
+            // CommandBuffer cmd = null;
+            // var i = 0;
+            // foreach (var field in images)
+            // {
+            //     if (field.GetValue() is RenderTexture renderTexture)
+            //     {
+            //         // We may be temped to use RenderTexture instead of Texture2D for the shared textures.
+            //         // RenderTextures are always stored as typeless texture resources though, which aren't supported
+            //         // by CUDA interop (used by Disguise under the hood):
+            //         // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__D3D11.html#group__CUDART__D3D11_1g85d07753780643584b8febab0370623b
+            //         // Texture2D apply their GraphicsFormat to their texture resources.
+            //
+            //         var sharedTexture = TemporaryTexture2DManager.Instance.Get(new Texture2DDescriptor()
+            //         {
+            //             Width = (int)imageData[i].width,
+            //             Height = (int)imageData[i].height,
+            //             Format = imageData[i].format,
+            //             Linear = true
+            //         });
+            //
+            //         NativeRenderingPlugin.InputImageData data = new NativeRenderingPlugin.InputImageData()
+            //         {
+            //             m_rs_getFrameImage = PluginEntry.instance.rs_getFrameImage_ptr,
+            //             m_ImageId = imageData[i].imageId,
+            //             m_Texture = sharedTexture.GetNativeTexturePtr()
+            //         };
+            //
+            //         if (NativeRenderingPlugin.InputImageDataPool.TryPreserve(data, out var dataPtr))
+            //         {
+            //             if (cmd == null)
+            //                 cmd = CommandBufferPool.Get($"Receiving Disguise Image Parameters");
+            //
+            //             cmd.IssuePluginEventAndData(
+            //                 NativeRenderingPlugin.GetRenderEventCallback(),
+            //                 NativeRenderingPlugin.GetEventID(NativeRenderingPlugin.EventID.InputImage),
+            //                 dataPtr);
+            //             cmd.IncrementUpdateCount(sharedTexture);
+            //
+            //             cmd.Blit(sharedTexture, renderTexture, new Vector2(1.0f, -1.0f), new Vector2(0.0f, 1.0f));
+            //             cmd.IncrementUpdateCount(renderTexture);
+            //         }
+            //         else
+            //         {
+            //             Debug.LogError($"DisguiseRenderStream: {nameof(NativeRenderingPlugin)}.{nameof(NativeRenderingPlugin.InputImageData)} pool exceeded, skipping input texture '{field.info.Name}'");
+            //         }
+            //     }
+            //
+            //     ++i;
+            // }
+            //
+            // if (cmd != null)
+            // {
+            //     context.ExecuteCommandBuffer(cmd);
+            //     CommandBufferPool.Release(cmd);
+            // }
         }
 
         static Camera[] getTemplateCameras()
@@ -531,14 +384,17 @@ namespace Disguise.RenderStream
         {
             get
             {
-                if (LatestFrameData.scene > m_SceneFields.Length)
-                    return Enumerable.Empty<RenderTexture>();
-
-                var images = m_SceneFields[LatestFrameData.scene].images;
-                if (images == null)
-                    return Enumerable.Empty<RenderTexture>();
-
-                return images.Select(x => x.GetValue() as RenderTexture);
+                // TODO fix live texture remote parameters
+                return Enumerable.Empty<RenderTexture>();
+                
+                // if (LatestFrameData.scene > m_SceneFields.Length)
+                //     return Enumerable.Empty<RenderTexture>();
+                //
+                // var images = m_SceneFields[LatestFrameData.scene].images;
+                // if (images == null)
+                //     return Enumerable.Empty<RenderTexture>();
+                //
+                // return images.Select(x => x.GetValue() as RenderTexture);
             }
         }
 
@@ -551,14 +407,14 @@ namespace Disguise.RenderStream
         GameObject[] m_Cameras = { };
         ManagedSchema m_Schema = new ();
 
-        public struct SceneFields
+        class SceneData
         {
-            public List<ObjectField> numerical;
-            public List<ObjectField> images;
-            public List<ObjectField> texts;
+            public readonly SceneCPUData CPUData = new SceneCPUData();
+            public readonly SceneGPUData GPUData = new SceneGPUData();
         }
         
-        SceneFields[] m_SceneFields;
+        SceneData[] m_SceneData;
+        List<IRemoteParameterWrapper> m_RemoteParameters = new List<IRemoteParameterWrapper>();
         DisguiseRenderStreamSettings m_Settings;
         bool m_HasUpdatedLiveTexturesThisFrame;
     }

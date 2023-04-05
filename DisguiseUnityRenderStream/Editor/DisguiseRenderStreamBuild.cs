@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Disguise.RenderStream.Parameters;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -63,14 +64,14 @@ namespace Disguise.RenderStream
             
             GenerateSchema(report, scene =>
             {
-                var remoteParameters = Object.FindObjectsByType<DisguiseRemoteParameters>(FindObjectsSortMode.InstanceID);
-
-                foreach (var remoteParameter in remoteParameters)
+                if (DisguiseParameterList.FindInstance() is { } parameterList)
                 {
-                    foreach (var exposedParameter in remoteParameter.exposedParameters())
+                    foreach (var (_, parameter) in parameterList.GetParametersOrderedForSchema())
                     {
-                        var memberInfo = remoteParameter.GetMemberInfoFromManagedParameter(exposedParameter);
-                        preserver.Preserve(memberInfo);
+                        if (parameter.MemberInfo is { } memberInfo)
+                        {
+                            preserver.Preserve(memberInfo);
+                        }
                     }
                 }
                 
@@ -183,11 +184,27 @@ namespace Disguise.RenderStream
             };
             var currentScene = schema.scenes[sceneIndex];
 
-            var parameters = currentScene.parameters
-                .Concat(Object.FindObjectsByType<DisguiseRemoteParameters>(FindObjectsSortMode.InstanceID)
-                .SelectMany(p => p.exposedParameters()));
+            var sceneParameters = new List<ManagedRemoteParameter>();
             
-            currentScene.parameters = parameters.ToArray();
+            if (DisguiseParameterList.FindInstance() is { } parameterList)
+            {
+                foreach (var (group, parameter) in parameterList.GetParametersOrderedForSchema())
+                {
+                    if (parameter.TryGetParametersForSchema(group, out var managedParameters))
+                    {
+                        foreach (var managedParameter in managedParameters)
+                        {
+                            sceneParameters.Add(managedParameter);
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"Parameter '{parameter.Name}' in group '{group.Name}' is not fully configured and will be skipped");
+                    }
+                }
+            }
+            
+            currentScene.parameters = sceneParameters.ToArray();
         }
 
         static void AddPresenterToSchema(ManagedSchema schema)

@@ -5,7 +5,7 @@ namespace Disguise.RenderStream
 {
     static class DisguiseRenderStreamSettingsProvider
     {
-        static readonly string k_SettingsPath = "Project/DisguiseRenderStream";
+        public const string SettingsPath = "Project/DisguiseRenderStream";
 
         class Contents
         {
@@ -14,7 +14,7 @@ namespace Disguise.RenderStream
 
         [SettingsProvider]
         static SettingsProvider CreateSettingsProvider() =>
-            new (k_SettingsPath, SettingsScope.Project)
+            new (SettingsPath, SettingsScope.Project)
             {
                 label = Contents.SettingsName,
                 activateHandler = (searchContext, parentElement) =>

@@ -109,45 +109,48 @@ namespace Disguise.RenderStream
         /// </remarks>
         public static List<ManagedRemoteParameter> GetManagedRemoteParameters(ManagedSchema schema, ManagedRemoteParameters sceneSchema)
         {
-            var prefab = LoadPrefab();
-            var parameters = prefab.GetComponent<DisguiseRemoteParameters>();
-            var managedParameters = parameters.exposedParameters();
+            // TODO fix presenter remote parameters
+            return new List<ManagedRemoteParameter>();
 
-            foreach (var parameter in managedParameters)
-            {
-                // Discard the name of the GameObject, keep only the field ex:
-                // "DisguisePresenter Mode" => "Mode"
-                parameter.displayName = parameter.displayName.Substring(parameter.displayName.IndexOf(" ") + 1);
-
-                // Generate dropdown choices as a concatenated list of: None + Channels (output) + Live textures (input)
-                if (parameter.displayName == nameof(Selected))
-                {
-                    List<string> options = new List<string>();
-                    options.Add(k_NoneTextureLabel);
-
-                    foreach (var channel in schema.channels)
-                    {
-                        options.Add(channel);
-                    }
-
-                    var remoteParameters = FindObjectsByType<DisguiseRemoteParameters>(FindObjectsSortMode.None);
-                    foreach (var sceneParameter in sceneSchema.parameters)
-                    {
-                        var remoteParams = Array.Find(remoteParameters, rp => sceneParameter.key.StartsWith(rp.prefix));
-                        var field = new ObjectField();
-                        field.info = remoteParams.GetMemberInfoFromManagedParameter(sceneParameter);
-
-                        if (field.FieldType == typeof(Texture))
-                        {
-                            options.Add(sceneParameter.displayName);
-                        }
-                    }
-
-                    parameter.options = options.ToArray();
-                }
-            }
-            
-            return managedParameters;
+            // var prefab = LoadPrefab();
+            // var parameters = prefab.GetComponent<DisguiseRemoteParameters>();
+            // var managedParameters = parameters.exposedParameters();
+            //
+            // foreach (var parameter in managedParameters)
+            // {
+            //     // Discard the name of the GameObject, keep only the field ex:
+            //     // "DisguisePresenter Mode" => "Mode"
+            //     parameter.displayName = parameter.displayName.Substring(parameter.displayName.IndexOf(" ") + 1);
+            //
+            //     // Generate dropdown choices as a concatenated list of: None + Channels (output) + Live textures (input)
+            //     if (parameter.displayName == nameof(Selected))
+            //     {
+            //         List<string> options = new List<string>();
+            //         options.Add(k_NoneTextureLabel);
+            //
+            //         foreach (var channel in schema.channels)
+            //         {
+            //             options.Add(channel);
+            //         }
+            //
+            //         var remoteParameters = FindObjectsByType<DisguiseRemoteParameters>(FindObjectsSortMode.None);
+            //         foreach (var sceneParameter in sceneSchema.parameters)
+            //         {
+            //             var remoteParams = Array.Find(remoteParameters, rp => sceneParameter.key.StartsWith(rp.prefix));
+            //             var field = new ObjectField();
+            //             field.info = remoteParams.GetMemberInfoFromManagedParameter(sceneParameter);
+            //
+            //             if (field.FieldType == typeof(Texture))
+            //             {
+            //                 options.Add(sceneParameter.displayName);
+            //             }
+            //         }
+            //
+            //         parameter.options = options.ToArray();
+            //     }
+            // }
+            //
+            // return managedParameters;
         }
 #endif
 
