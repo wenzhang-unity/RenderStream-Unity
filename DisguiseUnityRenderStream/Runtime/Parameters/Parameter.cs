@@ -83,10 +83,33 @@ namespace Disguise.RenderStream.Parameters
             {
                 if (value != m_Object)
                 {
-                    m_Object = value;
-                    m_Component = null;
+                    var resetMemberInfo = true;
+                    Component newComponent = null;
                     
-                    MemberInfoForEditor = default;
+                    if (value != null && m_Object != null)
+                    {
+                        if (m_Component == null)
+                        {
+                            // A new Asset or GameObject of the same type?
+                            resetMemberInfo = value.GetType() != m_Object.GetType();
+                        }
+                        else if (value is GameObject newGameObject)
+                        {
+                            // A new GameObject that has the same Component?
+                            if (newGameObject.GetComponent(m_Component.GetType()) is { } matchingComponent)
+                            {
+                                resetMemberInfo = false;
+                                newComponent = matchingComponent;
+                            }
+                        }
+                    }
+                    
+                    if (resetMemberInfo)
+                        MemberInfoForEditor = default;
+                    
+                    m_Object = value;
+                    m_Component = newComponent;
+                    
                     ApplyMemberInfo(MemberInfoForEditor);
 
                     if (!m_HasCustomName)
@@ -104,10 +127,16 @@ namespace Disguise.RenderStream.Parameters
             {
                 if (value != m_Component)
                 {
+                    // A new Component of a different type?
+                    if (value != null && m_Component != null &&
+                        value.GetType() != m_Component.GetType())
+                    {
+                        MemberInfoForEditor = default;
+                    }
+                    
                     m_Component = value;
                     m_Object = m_Component.gameObject;
                     
-                    MemberInfoForEditor = default;
                     ApplyMemberInfo(MemberInfoForEditor);
 
                     if (!m_HasCustomName)
