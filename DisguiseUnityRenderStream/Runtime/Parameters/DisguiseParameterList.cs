@@ -36,12 +36,12 @@ namespace Disguise.RenderStream.Parameters
             
             foreach (var group in m_Groups)
             {
-                if (excludeDisabled && !group.m_Enabled)
+                if (excludeDisabled && !group.Enabled)
                     continue;
 
                 foreach (var parameter in group.m_Parameters)
                 {
-                    if (excludeDisabled && !parameter.m_Enabled)
+                    if (excludeDisabled && !parameter.Enabled)
                         continue;
                     
                     parameters.Add((group, parameter));
@@ -70,12 +70,12 @@ namespace Disguise.RenderStream.Parameters
         {
             foreach (var group in m_Groups)
             {
-                if (!group.m_Enabled)
+                if (!group.Enabled)
                     continue;
                 
                 foreach (var parameter in group.m_Parameters)
                 {
-                    if (!parameter.m_Enabled)
+                    if (!parameter.Enabled)
                         continue;
                     
                     parameter.OnEnable();

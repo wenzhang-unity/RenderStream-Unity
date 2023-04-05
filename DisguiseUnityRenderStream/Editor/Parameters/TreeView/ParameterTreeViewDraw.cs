@@ -95,12 +95,12 @@ namespace Disguise.RenderStream.Parameters
             toggleRect.width = 18f;
             using (var check = new EditorGUI.ChangeCheckScope())
             {
-                var enabled = EditorGUI.Toggle(toggleRect, group.m_Enabled);
+                var enabled = EditorGUI.Toggle(toggleRect, group.Enabled);
 
                 if (check.changed)
                 {
                     RegisterUndo(Contents.UndoToggleEnableParameterGroup);
-                    group.m_Enabled = enabled;
+                    group.Enabled = enabled;
                 }
             }
                 
@@ -118,12 +118,12 @@ namespace Disguise.RenderStream.Parameters
             toggleRect.width = 18f;
             using (var check = new EditorGUI.ChangeCheckScope())
             {
-                var enabled = EditorGUI.Toggle(toggleRect, parameter.m_Enabled);
+                var enabled = EditorGUI.Toggle(toggleRect, parameter.Enabled);
 
                 if (check.changed)
                 {
                     RegisterUndo(Contents.UndoToggleEnableParameter);
-                    parameter.m_Enabled = enabled;
+                    parameter.Enabled = enabled;
                 }
             }
                     

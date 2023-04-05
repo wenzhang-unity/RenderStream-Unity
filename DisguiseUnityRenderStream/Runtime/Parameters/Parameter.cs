@@ -10,13 +10,21 @@ namespace Disguise.RenderStream.Parameters
     class Parameter
     {
         [SerializeField]
-        public bool m_Enabled = true;
+        bool m_Enabled = true;
         
         [SerializeField]
         MemberInfoForRuntime m_MemberInfoForRuntime = new MemberInfoForRuntime();
 
         [SerializeReference]
         IRemoteParameterWrapper m_RemoteParameterWrapper;
+        
+        public bool Enabled
+        {
+            get => m_Enabled;
+#if UNITY_EDITOR
+            set => m_Enabled = value;
+#endif
+        }
         
         public IRemoteParameterWrapper RemoteParameterWrapper => m_RemoteParameterWrapper;
 

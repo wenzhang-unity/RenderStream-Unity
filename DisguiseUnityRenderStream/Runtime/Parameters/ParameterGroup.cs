@@ -8,10 +8,26 @@ namespace Disguise.RenderStream.Parameters
     class ParameterGroup
     {
         [SerializeField]
-        public bool m_Enabled = true;
+        bool m_Enabled = true;
         
         [SerializeField]
         public List<Parameter> m_Parameters = new List<Parameter>();
+
+        public bool Enabled
+        {
+            get => m_Enabled;
+#if UNITY_EDITOR
+            set
+            {
+                m_Enabled = value;
+                
+                foreach (var parameter in m_Parameters)
+                {
+                    parameter.Enabled = m_Enabled;
+                }
+            }
+#endif
+        }
         
 #if UNITY_EDITOR
         const string DefaultGroupUnityDisplayName = "Default Group";
