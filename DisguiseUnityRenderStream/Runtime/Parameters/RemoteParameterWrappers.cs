@@ -461,6 +461,67 @@ namespace Disguise.RenderStream.Parameters
 #endif
     }
 
+    abstract class StringCollectionRemoteParameterWrapper<TCollection> : RemoteParameterWrapper<TCollection>
+    {
+        protected const char k_Separator = ' ';
+        
+        protected abstract TCollection StringToCollection(string value);
+        protected abstract string CollectionToString(TCollection collection);
+        
+        public override void ApplyData(SceneCPUData data)
+        {
+            var value = data.Text[0];
+            var collectionValue = StringToCollection(value);
+            SetValue(collectionValue);
+        }
+
+        public override void ApplyData(SceneGPUData data)
+        {
+            
+        }
+        
+#if UNITY_EDITOR
+        public override IList<DisguiseRemoteParameter> GetParametersForSchema()
+        {
+            var collectionValue = GetValue();
+            var stringValue = CollectionToString(collectionValue);
+            
+            return new[]
+            {
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_TEXT, stringValue, 0, 0)
+            };
+        }
+#endif
+    }
+
+    [RemoteParameterWrapper(typeof(string[]))]
+    class StringArrayRemoteParameterWrapper : StringCollectionRemoteParameterWrapper<string[]>
+    {
+        protected override string[] StringToCollection(string value)
+        {
+            return value.Split(k_Separator);
+        }
+
+        protected override string CollectionToString(string[] collection)
+        {
+            return string.Join(k_Separator, collection);
+        }
+    }
+    
+    [RemoteParameterWrapper(typeof(List<string>))]
+    class StringListRemoteParameterWrapper : StringCollectionRemoteParameterWrapper<List<string>>
+    {
+        protected override List<string> StringToCollection(string value)
+        {
+            return value.Split(k_Separator).ToList();
+        }
+
+        protected override string CollectionToString(List<string> collection)
+        {
+            return string.Join(k_Separator, collection);
+        }
+    }
+
     [RemoteParameterWrapper(typeof(bool))]
     class BoolRemoteParameterWrapper : RemoteParameterWrapper<bool>
     {
@@ -555,5 +616,5 @@ namespace Disguise.RenderStream.Parameters
 #endif
     }
     
-    // TODO: Add wrappers for: string[], Transform, Texture
+    // TODO: Add wrappers for: Transform, Texture
 }
