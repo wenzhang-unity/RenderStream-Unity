@@ -52,6 +52,7 @@ namespace Disguise.RenderStream.Parameters
             this.DeselectOnUnhandledMouseDown(true);
             
             Undo.undoRedoPerformed += OnUndoRedoPerformed;
+            Undo.undoRedoPerformed += InitializeReflectionInfo;
             DragAndDrop.AddDropHandler(SceneDropHandler);
             
             rowHeight = 20;
@@ -107,6 +108,7 @@ namespace Disguise.RenderStream.Parameters
         public void Destroy()
         {
             Undo.undoRedoPerformed -= OnUndoRedoPerformed;
+            Undo.undoRedoPerformed -= InitializeReflectionInfo;
             DragAndDrop.RemoveDropHandler(SceneDropHandler);
         }
         

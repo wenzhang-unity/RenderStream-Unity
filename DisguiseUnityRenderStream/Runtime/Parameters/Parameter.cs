@@ -88,8 +88,11 @@ namespace Disguise.RenderStream.Parameters
                 m_Name = m_Name,
                 m_Enabled = m_Enabled,
                 m_HasCustomName = m_HasCustomName,
+                m_Component = m_Component,
                 m_Object = m_Object,
-                m_Component = m_Component
+                m_MemberInfoForEditor = m_MemberInfoForEditor,
+                m_MemberInfoForRuntime = m_MemberInfoForRuntime,
+                m_RemoteParameterWrapper = m_RemoteParameterWrapper
             };
         }
         
