@@ -146,11 +146,16 @@ namespace Disguise.RenderStream.Parameters
         
         void ParameterComponentGUI(Rect rect, Parameter parameter, ref RowGUIArgs args)
         {
-            if (parameter.Object is GameObject go)
+            if (parameter.Object is GameObject go && go != null)
             {
-                var componentButtonLabel = parameter.Component != null
-                    ? ObjectNames.NicifyVariableName(parameter.Component.GetType().Name)
-                    : Contents.DropdownNoneLabel;
+                string componentButtonLabel;
+
+                if (parameter.Component == null)
+                    componentButtonLabel = Contents.DropdownNoneLabel;
+                else if (IsMissingComponent(parameter.Component))
+                    componentButtonLabel = Contents.DropdownMissingScriptLabel;
+                else
+                    componentButtonLabel = ObjectNames.NicifyVariableName(parameter.Component.GetType().Name);
                 
                 if (GUI.Button(rect, componentButtonLabel, Contents.ComponentPopupStyle))
                 {
@@ -160,6 +165,10 @@ namespace Disguise.RenderStream.Parameters
 
                     foreach (var component in components)
                     {
+                        // This is a missing component reference (ex deleted script), ignore it
+                        if (component == null)
+                            continue;
+                        
                         var componentLabel = ObjectNames.NicifyVariableName(component.GetType().Name);
                         
                         menu.AddItem(new GUIContent(componentLabel), component == parameter.Component, () =>
@@ -184,7 +193,7 @@ namespace Disguise.RenderStream.Parameters
         
         void ParameterPropertyGUI(Rect rect, Parameter parameter, ref RowGUIArgs args)
         {
-            if (parameter.ReflectedObject != null)
+            if (parameter.ReflectedObject != null && !IsMissingComponent(parameter.ReflectedObject))
             {
                 var propertyButtonContent = new GUIContent();
 
@@ -229,7 +238,7 @@ namespace Disguise.RenderStream.Parameters
         {
             var icon = noneIcon;
 
-            if (component != null)
+            if (component != null && !IsMissingComponent(component))
             {
                 icon = EditorGUIUtility.ObjectContent(null, component.GetType()).image;
                 if (icon == null)
@@ -237,6 +246,11 @@ namespace Disguise.RenderStream.Parameters
             }
                 
             GUI.DrawTexture(rect, icon, ScaleMode.ScaleToFit);
+        }
+
+        bool IsMissingComponent(UnityEngine.Object component)
+        {
+            return component.GetType() == typeof(Component);
         }
     }
 }
