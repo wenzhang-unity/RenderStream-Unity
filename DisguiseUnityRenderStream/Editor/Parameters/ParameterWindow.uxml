@@ -15,7 +15,7 @@
     </ui:VisualElement>
 
     <ui:VisualElement name="extra-parameter-list-section">
-        <ui:Label name="extra-parameter-list-label" text="Only a single Disguise Parameter List is expected in the scene, found:" />
+        <ui:Label name="extra-parameter-list-label" text="Only a single active Disguise Parameter List is expected in the scene, found:" />
         <Disguise.RenderStream.Parameters.ExtraInstanceListView name="extra-parameter-list-names" class="horizontal-container" />
     </ui:VisualElement>
     <ui:IMGUIContainer name="tree-view-container" />

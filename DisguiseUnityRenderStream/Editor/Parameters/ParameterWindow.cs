@@ -1,4 +1,5 @@
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.SceneManagement;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -178,7 +179,7 @@ namespace Disguise.RenderStream.Parameters
         /// </summary>
         void PollScene()
         {
-            var lists = FindObjectsOfType<DisguiseParameterList>();
+            var lists = FindObjectsByType<DisguiseParameterList>(FindObjectsSortMode.InstanceID);
             m_ExtraParameterListNames.itemsSource = lists;
             
             if (lists.Length == 0)
@@ -224,7 +225,7 @@ namespace Disguise.RenderStream.Parameters
                 m_SceneNameLabel.text = string.Empty;
             }
             
-            m_PatchSchemaButton.SetEnabled(PlayerSettings.GetManagedStrippingLevel(BuildTargetGroup.Standalone) == ManagedStrippingLevel.Disabled);
+            m_PatchSchemaButton.SetEnabled(PlayerSettings.GetManagedStrippingLevel(NamedBuildTarget.Standalone) == ManagedStrippingLevel.Disabled);
         }
 
         void OnSceneLoaded(Scene oldScene, Scene newScene)
@@ -236,7 +237,13 @@ namespace Disguise.RenderStream.Parameters
         static DisguiseParameterList AddParameterListToScene()
         {
             var go = new GameObject(ObjectNames.NicifyVariableName(nameof(DisguiseParameterList)));
-            return go.AddComponent<DisguiseParameterList>();
+            var parameterList = go.AddComponent<DisguiseParameterList>();
+            
+            StageUtility.PlaceGameObjectInCurrentStage(go);
+            Undo.RegisterCreatedObjectUndo(go, $"Created {go.name}");
+            Selection.activeObject = go;
+            
+            return parameterList;
         }
     }
     
