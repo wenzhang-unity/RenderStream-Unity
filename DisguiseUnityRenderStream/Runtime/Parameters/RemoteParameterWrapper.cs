@@ -133,10 +133,10 @@ namespace Disguise.RenderStream.Parameters
 #endif
 
         /// <inheritdoc/>
-        public bool IsValid => m_Object != null && m_MemberInfo != null;
+        public virtual bool IsValid => m_Object != null && m_MemberInfo != null;
 
         /// <inheritdoc/>
-        public void SetTarget(UnityEngine.Object sourceObject, MemberInfo memberInfo)
+        public virtual void SetTarget(UnityEngine.Object sourceObject, MemberInfo memberInfo)
         {
             m_Object = sourceObject;
             m_MemberInfo = memberInfo;

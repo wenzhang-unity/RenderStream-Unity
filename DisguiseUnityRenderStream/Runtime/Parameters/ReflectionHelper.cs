@@ -10,9 +10,25 @@ namespace Disguise.RenderStream.Parameters
     static class ReflectionHelper
     {
         /// <summary>
+        /// A shortcut to get the type of the field or property described by <paramref name="memberInfo"/>.
+        /// </summary>
+        /// <exception cref="NotSupportedException">If <paramref name="memberInfo"/> is not a <see cref="FieldInfo"/> or a <see cref="PropertyInfo"/></exception>
+        public static Type ResolveFieldOrPropertyType(MemberInfo memberInfo)
+        {
+            return memberInfo switch
+            {
+                FieldInfo fieldInfo => fieldInfo.FieldType,
+                PropertyInfo propertyInfo => propertyInfo.PropertyType,
+                null => null,
+                _ => throw new NotSupportedException()
+            };
+        }
+        
+#if UNITY_EDITOR
+        /// <summary>
         /// A filtered mapping of every <see cref="RemoteParameterWrapperAttribute.Type"/> to its <see cref="IRemoteParameterWrapper"/> implementation.
         /// </summary>
-        static Dictionary<Type, Type> s_TypeToRemoteParameterWrapper = TypeCache.GetTypesWithAttribute<RemoteParameterWrapperAttribute>()
+        static readonly Dictionary<Type, Type> s_TypeToRemoteParameterWrapper = TypeCache.GetTypesWithAttribute<RemoteParameterWrapperAttribute>()
             .Where(t => typeof(IRemoteParameterWrapper).IsAssignableFrom(t))
             .Select(type => (type, type.GetCustomAttribute(typeof(RemoteParameterWrapperAttribute)) as RemoteParameterWrapperAttribute))
             .Where(tuple => tuple.Item2 != null)
@@ -25,21 +41,11 @@ namespace Disguise.RenderStream.Parameters
         /// </summary>
         public static IList<string> GetEnumDisplayNames(Type enumType)
         {
-            var values = (Enum[]) Enum.GetValues(enumType);
-            return values.Select(GetEnumDisplayName).ToArray();
-        }
-        
-        /// <summary>
-        /// Returns a user-friendly name of an enum value. Uses an associated <see cref="DisplayNameAttribute"/> directly
-        /// or <see cref="ObjectNames.NicifyVariableName"/> of the real name when absent.
-        /// </summary>
-        public static string GetEnumDisplayName(Enum value)
-        {
-            var type = value.GetType();
-            var memberInfos = type.GetMember(value.ToString());
-            var memberInfo = memberInfos[0];
-
-            return GetDisplayName(memberInfo) ?? ObjectNames.NicifyVariableName(memberInfo.Name);
+            return Enum.GetNames(enumType).Select(name =>
+            {
+                var memberInfo = enumType.GetField(name);
+                return GetDisplayName(memberInfo) ?? ObjectNames.NicifyVariableName(memberInfo.Name);
+            }).ToList();
         }
 
         /// <summary>
@@ -53,18 +59,42 @@ namespace Disguise.RenderStream.Parameters
             // Only members that have a type with a corresponding RemoteParameterWrapperAttribute are collected.
             
             var fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
-                .Where(m => s_TypeToRemoteParameterWrapper.ContainsKey(m.FieldType))
+                .Where(m => TargetTypeIsSupported(m.FieldType))
                 .Select(CreateMemberInfoFromField)
                 .OrderBy(m => m.UIName)
                 .ToArray();
             
             var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
-                .Where(m => s_TypeToRemoteParameterWrapper.ContainsKey(m.PropertyType) && m.GetGetMethod() != null && m.GetSetMethod() != null)
+                .Where(m => TargetTypeIsSupported(m.PropertyType) && m.GetGetMethod() != null && m.GetSetMethod() != null)
                 .Select(CreateMemberInfoFromProperty)
                 .OrderBy(m => m.UIName)
                 .ToArray();
             
             return fields.Concat(properties).ToArray();
+        }
+        
+        static Type GetSearchType(Type type)
+        {
+            if (s_TypeToRemoteParameterWrapper.ContainsKey(type))
+                return type;
+            
+            // Funnel the unregistered enum type into our generic Enum handler
+            if (type.IsEnum)
+                return typeof(Enum);
+
+            return type;
+        }
+
+        static bool TargetTypeIsSupported(Type type)
+        {
+            var searchType = GetSearchType(type);
+            return s_TypeToRemoteParameterWrapper.ContainsKey(searchType);
+        }
+        
+        static Type GetGetterSetterType(Type type)
+        {
+            var searchType = GetSearchType(type);
+            return s_TypeToRemoteParameterWrapper[searchType];
         }
 
         /// <summary>
@@ -80,7 +110,7 @@ namespace Disguise.RenderStream.Parameters
 
             if (memberInfo is FieldInfo field)
             {
-                if (!s_TypeToRemoteParameterWrapper.ContainsKey(field.FieldType))
+                if (!TargetTypeIsSupported(field.FieldType))
                 {
                     memberInfoForEditor = default;
                     return false;
@@ -90,7 +120,7 @@ namespace Disguise.RenderStream.Parameters
             }
             else if (memberInfo is PropertyInfo property)
             {
-                if (!s_TypeToRemoteParameterWrapper.ContainsKey(property.PropertyType))
+                if (!TargetTypeIsSupported(property.PropertyType))
                 {
                     memberInfoForEditor = default;
                     return false;
@@ -115,7 +145,7 @@ namespace Disguise.RenderStream.Parameters
                 RealName = field.Name,
                 DisplayName = GetDisplayName(field),
                 ValueType = field.FieldType,
-                GetterSetterType = s_TypeToRemoteParameterWrapper[field.FieldType]
+                GetterSetterType = GetGetterSetterType(field.FieldType)
             };
         }
         
@@ -127,7 +157,7 @@ namespace Disguise.RenderStream.Parameters
                 RealName = property.Name,
                 DisplayName = GetDisplayName(property),
                 ValueType = property.PropertyType,
-                GetterSetterType = s_TypeToRemoteParameterWrapper[property.PropertyType]
+                GetterSetterType = GetGetterSetterType(property.PropertyType)
             };
         }
 
@@ -136,5 +166,6 @@ namespace Disguise.RenderStream.Parameters
             var displayNameAttribute = memberInfo.GetCustomAttribute<DisplayNameAttribute>();
             return displayNameAttribute?.DisplayName;
         }
+#endif
     }
 }

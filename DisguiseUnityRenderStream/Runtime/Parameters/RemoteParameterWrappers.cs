@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using UnityEngine;
 
 namespace Disguise.RenderStream.Parameters
@@ -479,5 +481,75 @@ namespace Disguise.RenderStream.Parameters
 #endif
     }
     
-    // TODO: Add wrappers for: Enum, Transform, Texture
+    [RemoteParameterWrapper(typeof(Enum))]
+    class EnumRemoteParameterWrapper : RemoteParameterWrapper<object>
+    {
+        class EnumValuesCache
+        {
+            Dictionary<Type, Array> m_Cache = new Dictionary<Type, Array>();
+
+            public Array GetValues(Type enumType)
+            {
+                if (m_Cache.TryGetValue(enumType, out var cachedValues))
+                {
+                    return cachedValues;
+                }
+                
+                var values = Enum.GetValues(enumType);
+                m_Cache.Add(enumType, values);
+                return values;
+            }
+        }
+        
+        static EnumValuesCache s_EnumValuesCache = new EnumValuesCache();
+        
+        Type m_EnumType;
+        Array m_EnumValues;
+
+        public override bool IsValid => base.IsValid && m_EnumType != null && m_EnumValues.Length > 0;
+
+        public override void SetTarget(UnityEngine.Object sourceObject, MemberInfo memberInfo)
+        {
+            base.SetTarget(sourceObject, memberInfo);
+
+            if (ReflectionHelper.ResolveFieldOrPropertyType(memberInfo) is { IsEnum: true } enumType)
+            {
+                m_EnumType = enumType;
+                m_EnumValues = s_EnumValuesCache.GetValues(m_EnumType);
+            }
+            else
+            {
+                m_EnumType = null;
+                m_EnumValues = Array.Empty<object>();
+            }
+        }
+        
+        public override void ApplyData(SceneCPUData sceneCPUData)
+        {
+            var ordinalValue = Convert.ToInt32(sceneCPUData.Numeric.GetNext());
+            var enumValue = m_EnumValues.GetValue(ordinalValue);
+            SetValue(enumValue);
+        }
+
+        public override void ApplyData(SceneGPUData sceneGPUData)
+        {
+            
+        }
+        
+#if UNITY_EDITOR
+        public override IList<DisguiseRemoteParameter> GetParametersForSchema()
+        {
+            var enumValue = GetValue();
+            var ordinalValue = Array.IndexOf(m_EnumValues, enumValue);
+            var names = ReflectionHelper.GetEnumDisplayNames(m_EnumType).ToArray();
+            
+            return new[]
+            {
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, ordinalValue, 0f, names.Length - 1, names)
+            };
+        }
+#endif
+    }
+    
+    // TODO: Add wrappers for: Transform, Texture
 }

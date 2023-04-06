@@ -37,6 +37,8 @@ namespace Disguise.RenderStream.Utils
                     {
                         gen.Emit(OpCodes.Ldarg_0);
                         gen.Emit(OpCodes.Ldarg_1);
+                        if (typeof(T) != field.FieldType)
+                            gen.Emit(OpCodes.Unbox_Any, field.FieldType);
                         gen.Emit(OpCodes.Stfld, field);
                         gen.Emit(OpCodes.Ret);
 
@@ -46,6 +48,8 @@ namespace Disguise.RenderStream.Utils
                     {
                         gen.Emit(OpCodes.Ldarg_0);
                         gen.Emit(OpCodes.Ldarg_1);
+                        if (typeof(T) != property.PropertyType)
+                            gen.Emit(OpCodes.Unbox_Any, property.PropertyType);
                         gen.Emit(OpCodes.Call, property.GetSetMethod());
                         gen.Emit(OpCodes.Ret);
 
