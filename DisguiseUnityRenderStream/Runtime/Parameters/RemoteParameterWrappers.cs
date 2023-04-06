@@ -46,7 +46,7 @@ namespace Disguise.RenderStream.Parameters
         protected float Min;
         protected float Max;
 
-        public override void ApplyData(SceneGPUData sceneGPUData)
+        public override void ApplyData(SceneGPUData data)
         {
             
         }
@@ -71,9 +71,9 @@ namespace Disguise.RenderStream.Parameters
             Max = Mathf.Min(sbyte.MaxValue, MinMax.IntMax);
         }
         
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
-            SetValue(Convert.ToSByte(sceneCPUData.Numeric.GetNext()));
+            SetValue(Convert.ToSByte(data.Numeric[0]));
         }
     }
     
@@ -86,9 +86,9 @@ namespace Disguise.RenderStream.Parameters
             Max = Mathf.Min(byte.MaxValue, MinMax.IntMax);
         }
         
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
-            SetValue(Convert.ToByte(sceneCPUData.Numeric.GetNext()));
+            SetValue(Convert.ToByte(data.Numeric[0]));
         }
     }
     
@@ -101,9 +101,9 @@ namespace Disguise.RenderStream.Parameters
             Max = Mathf.Min(short.MaxValue, MinMax.IntMax);
         }
         
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
-            SetValue(Convert.ToInt16(sceneCPUData.Numeric.GetNext()));
+            SetValue(Convert.ToInt16(data.Numeric[0]));
         }
     }
     
@@ -116,9 +116,9 @@ namespace Disguise.RenderStream.Parameters
             Max = Mathf.Min(ushort.MaxValue, MinMax.IntMax);
         }
         
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
-            SetValue(Convert.ToUInt16(sceneCPUData.Numeric.GetNext()));
+            SetValue(Convert.ToUInt16(data.Numeric[0]));
         }
     }
     
@@ -131,9 +131,9 @@ namespace Disguise.RenderStream.Parameters
             Max = Mathf.Min(int.MaxValue, MinMax.IntMax);
         }
         
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
-            SetValue(Convert.ToInt32(sceneCPUData.Numeric.GetNext()));
+            SetValue(Convert.ToInt32(data.Numeric[0]));
         }
     }
     
@@ -146,9 +146,9 @@ namespace Disguise.RenderStream.Parameters
             Max = Mathf.Min(uint.MaxValue, MinMax.IntMax);
         }
         
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
-            SetValue(Convert.ToUInt32(sceneCPUData.Numeric.GetNext()));
+            SetValue(Convert.ToUInt32(data.Numeric[0]));
         }
     }
     
@@ -161,25 +161,25 @@ namespace Disguise.RenderStream.Parameters
             Max = MinMax.FloatMax;
         }
         
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
-            SetValue(sceneCPUData.Numeric.GetNext());
+            SetValue(data.Numeric[0]);
         }
     }
     
     [RemoteParameterWrapper(typeof(Vector2Int))]
     class Vector2IntRemoteParameterWrapper : RemoteParameterWrapper<Vector2Int>
     {
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
             var value = new Vector2Int(
-                Convert.ToInt32(sceneCPUData.Numeric.GetNext()),
-                Convert.ToInt32(sceneCPUData.Numeric.GetNext())
+                Convert.ToInt32(data.Numeric[0]),
+                Convert.ToInt32(data.Numeric[1])
             );
             SetValue(value);
         }
 
-        public override void ApplyData(SceneGPUData sceneGPUData)
+        public override void ApplyData(SceneGPUData data)
         {
             
         }
@@ -201,17 +201,17 @@ namespace Disguise.RenderStream.Parameters
     [RemoteParameterWrapper(typeof(Vector3Int))]
     class Vector3IntRemoteParameterWrapper : RemoteParameterWrapper<Vector3Int>
     {
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
             var value = new Vector3Int(
-                Convert.ToInt32(sceneCPUData.Numeric.GetNext()),
-                Convert.ToInt32(sceneCPUData.Numeric.GetNext()),
-                Convert.ToInt32(sceneCPUData.Numeric.GetNext())
+                Convert.ToInt32(data.Numeric[0]),
+                Convert.ToInt32(data.Numeric[1]),
+                Convert.ToInt32(data.Numeric[2])
             );
             SetValue(value);
         }
 
-        public override void ApplyData(SceneGPUData sceneGPUData)
+        public override void ApplyData(SceneGPUData data)
         {
             
         }
@@ -234,16 +234,16 @@ namespace Disguise.RenderStream.Parameters
     [RemoteParameterWrapper(typeof(Vector2))]
     class Vector2RemoteParameterWrapper : RemoteParameterWrapper<Vector2>
     {
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
             var value = new Vector2(
-                sceneCPUData.Numeric.GetNext(),
-                sceneCPUData.Numeric.GetNext()
+                data.Numeric[0],
+                data.Numeric[1]
             );
             SetValue(value);
         }
 
-        public override void ApplyData(SceneGPUData sceneGPUData)
+        public override void ApplyData(SceneGPUData data)
         {
             
         }
@@ -265,17 +265,17 @@ namespace Disguise.RenderStream.Parameters
     [RemoteParameterWrapper(typeof(Vector3))]
     class Vector3RemoteParameterWrapper : RemoteParameterWrapper<Vector3>
     {
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
             var value = new Vector3(
-                sceneCPUData.Numeric.GetNext(),
-                sceneCPUData.Numeric.GetNext(),
-                sceneCPUData.Numeric.GetNext()
+                data.Numeric[0],
+                data.Numeric[1],
+                data.Numeric[2]
             );
             SetValue(value);
         }
 
-        public override void ApplyData(SceneGPUData sceneGPUData)
+        public override void ApplyData(SceneGPUData data)
         {
             
         }
@@ -298,18 +298,18 @@ namespace Disguise.RenderStream.Parameters
     [RemoteParameterWrapper(typeof(Vector4))]
     class Vector4RemoteParameterWrapper : RemoteParameterWrapper<Vector4>
     {
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
             var value = new Vector4(
-                sceneCPUData.Numeric.GetNext(),
-                sceneCPUData.Numeric.GetNext(),
-                sceneCPUData.Numeric.GetNext(),
-                sceneCPUData.Numeric.GetNext()
+                data.Numeric[0],
+                data.Numeric[1],
+                data.Numeric[2],
+                data.Numeric[3]
             );
             SetValue(value);
         }
 
-        public override void ApplyData(SceneGPUData sceneGPUData)
+        public override void ApplyData(SceneGPUData data)
         {
             
         }
@@ -333,18 +333,18 @@ namespace Disguise.RenderStream.Parameters
     [RemoteParameterWrapper(typeof(Color))]
     class ColorRemoteParameterWrapper : RemoteParameterWrapper<Color>
     {
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
             var value = new Color(
-                sceneCPUData.Numeric.GetNext(),
-                sceneCPUData.Numeric.GetNext(),
-                sceneCPUData.Numeric.GetNext(),
-                sceneCPUData.Numeric.GetNext()
+                data.Numeric[0],
+                data.Numeric[1],
+                data.Numeric[2],
+                data.Numeric[3]
             );
             SetValue(value);
         }
 
-        public override void ApplyData(SceneGPUData sceneGPUData)
+        public override void ApplyData(SceneGPUData data)
         {
             
         }
@@ -368,18 +368,18 @@ namespace Disguise.RenderStream.Parameters
     [RemoteParameterWrapper(typeof(Color32))]
     class Color32RemoteParameterWrapper : RemoteParameterWrapper<Color32>
     {
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
             var value = new Color32(
-                Convert.ToByte(sceneCPUData.Numeric.GetNext() * 255f),
-                Convert.ToByte(sceneCPUData.Numeric.GetNext() * 255f),
-                Convert.ToByte(sceneCPUData.Numeric.GetNext() * 255f),
-                Convert.ToByte(sceneCPUData.Numeric.GetNext() * 255f)
+                Convert.ToByte(data.Numeric[0] * 255f),
+                Convert.ToByte(data.Numeric[1] * 255f),
+                Convert.ToByte(data.Numeric[2] * 255f),
+                Convert.ToByte(data.Numeric[3] * 255f)
             );
             SetValue(value);
         }
 
-        public override void ApplyData(SceneGPUData sceneGPUData)
+        public override void ApplyData(SceneGPUData data)
         {
             
         }
@@ -403,14 +403,18 @@ namespace Disguise.RenderStream.Parameters
     [RemoteParameterWrapper(typeof(Quaternion))]
     class QuaternionRemoteParameterWrapper : RemoteParameterWrapper<Quaternion>
     {
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
-            var euler = new Vector3(sceneCPUData.Numeric.GetNext(), sceneCPUData.Numeric.GetNext(), sceneCPUData.Numeric.GetNext());
+            var euler = new Vector3(
+                data.Numeric[0],
+                data.Numeric[1],
+                data.Numeric[2]
+            );
             var quaternion = Quaternion.Euler(euler);
             SetValue(quaternion);
         }
 
-        public override void ApplyData(SceneGPUData sceneGPUData)
+        public override void ApplyData(SceneGPUData data)
         {
             
         }
@@ -433,13 +437,13 @@ namespace Disguise.RenderStream.Parameters
     [RemoteParameterWrapper(typeof(string))]
     class StringRemoteParameterWrapper : RemoteParameterWrapper<string>
     {
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
-            var value = sceneCPUData.Text.GetNext();
+            var value = data.Text[0];
             SetValue(value);
         }
 
-        public override void ApplyData(SceneGPUData sceneGPUData)
+        public override void ApplyData(SceneGPUData data)
         {
             
         }
@@ -460,12 +464,12 @@ namespace Disguise.RenderStream.Parameters
     [RemoteParameterWrapper(typeof(bool))]
     class BoolRemoteParameterWrapper : RemoteParameterWrapper<bool>
     {
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
-            SetValue(Convert.ToBoolean(sceneCPUData.Numeric.GetNext()));
+            SetValue(Convert.ToBoolean(data.Numeric[0]));
         }
 
-        public override void ApplyData(SceneGPUData sceneGPUData)
+        public override void ApplyData(SceneGPUData data)
         {
             
         }
@@ -486,7 +490,7 @@ namespace Disguise.RenderStream.Parameters
     {
         class EnumValuesCache
         {
-            Dictionary<Type, Array> m_Cache = new Dictionary<Type, Array>();
+            readonly Dictionary<Type, Array> m_Cache = new Dictionary<Type, Array>();
 
             public Array GetValues(Type enumType)
             {
@@ -501,7 +505,7 @@ namespace Disguise.RenderStream.Parameters
             }
         }
         
-        static EnumValuesCache s_EnumValuesCache = new EnumValuesCache();
+        static readonly EnumValuesCache s_EnumValuesCache = new EnumValuesCache();
         
         Type m_EnumType;
         Array m_EnumValues;
@@ -524,14 +528,14 @@ namespace Disguise.RenderStream.Parameters
             }
         }
         
-        public override void ApplyData(SceneCPUData sceneCPUData)
+        public override void ApplyData(SceneCPUData data)
         {
-            var ordinalValue = Convert.ToInt32(sceneCPUData.Numeric.GetNext());
+            var ordinalValue = Convert.ToInt32(data.Numeric[0]);
             var enumValue = m_EnumValues.GetValue(ordinalValue);
             SetValue(enumValue);
         }
 
-        public override void ApplyData(SceneGPUData sceneGPUData)
+        public override void ApplyData(SceneGPUData data)
         {
             
         }
@@ -551,5 +555,5 @@ namespace Disguise.RenderStream.Parameters
 #endif
     }
     
-    // TODO: Add wrappers for: Transform, Texture
+    // TODO: Add wrappers for: string[], Transform, Texture
 }

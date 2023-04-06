@@ -101,9 +101,25 @@ namespace Disguise.RenderStream
             }
             
             CreateStreams();
+
+            var sceneIndex = DisguiseRenderStreamSettings.GetOrCreateSettings().sceneControl switch
+            {
+                DisguiseRenderStreamSettings.SceneControl.Selection => loadedScene.buildIndex,
+                _ => 0
+            };
             
+            var spec = m_Schema.scenes[sceneIndex];
+            var sceneData = m_SceneData[sceneIndex];
+
             if (DisguiseParameterList.FindInstance() is { } parameterList)
-                m_RemoteParameters = parameterList.GetRemoteParameterWrappers();
+            {
+                var remoteParameters = parameterList.GetRemoteParameterWrappers();
+                sceneData.AssignRemoteParameters(remoteParameters, spec);
+            }
+            else
+            {
+                sceneData.AssignRemoteParameters(new List<(IRemoteParameterWrapper, int)>(), spec);
+            }
             
             SceneLoaded?.Invoke();
         }
@@ -219,20 +235,16 @@ namespace Disguise.RenderStream
             using var parameters = new NativeArray<float>(numNumericalParameters, Allocator.Temp);
             if (PluginEntry.instance.GetFrameParameters(spec.hash, parameters.AsSpan()) == RS_ERROR.RS_ERROR_SUCCESS)
             {
-                sceneData.CPUData.Numeric.SetData(parameters.GetEnumerator(), parameters.Length);
+                sceneData.Numeric.SetData(parameters.GetEnumerator(), parameters.Length);
 
-                sceneData.CPUData.Text.Reserve(numTextParameters);
                 for (uint i = 0; i < numTextParameters; i++)
                 {
                     var value = "";
                     if (PluginEntry.instance.getFrameText(spec.hash, i, ref value) == RS_ERROR.RS_ERROR_SUCCESS)
-                        sceneData.CPUData.Text.SetValue((int)i, value);
+                        sceneData.Text.SetValue((int)i, value);
                 }
-                
-                foreach (var remoteParameter in m_RemoteParameters)
-                {
-                    remoteParameter.ApplyData(sceneData.CPUData);
-                }
+
+                sceneData.ApplyCPUData();
             }
         }
     
@@ -406,15 +418,8 @@ namespace Disguise.RenderStream
         
         GameObject[] m_Cameras = { };
         ManagedSchema m_Schema = new ();
-
-        class SceneData
-        {
-            public readonly SceneCPUData CPUData = new SceneCPUData();
-            public readonly SceneGPUData GPUData = new SceneGPUData();
-        }
         
         SceneData[] m_SceneData;
-        List<IRemoteParameterWrapper> m_RemoteParameters = new List<IRemoteParameterWrapper>();
         DisguiseRenderStreamSettings m_Settings;
         bool m_HasUpdatedLiveTexturesThisFrame;
     }

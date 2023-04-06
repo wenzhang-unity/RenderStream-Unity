@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Disguise.RenderStream.Utils;
+using UnityEngine;
 
 namespace Disguise.RenderStream.Parameters
 {
@@ -101,13 +102,15 @@ namespace Disguise.RenderStream.Parameters
         
         /// <summary>
         /// Applies data from Disguise onto the target.
+        /// <remarks>Called during <see cref="UnityEngine.PlayerLoop.TimeUpdate.WaitForLastPresentationAndUpdateTime"/></remarks>
         /// </summary>
-        void ApplyData(SceneCPUData sceneCPUData);
+        void ApplyData(SceneCPUData data);
         
         /// <summary>
         /// Applies data from Disguise onto the target.
+        /// <remarks>Called during <see cref="UnityEngine.Rendering.RenderPipelineManager.beginContextRendering"/></remarks>
         /// </summary>
-        void ApplyData(SceneGPUData sceneGPUData);
+        void ApplyData(SceneGPUData data);
         
 #if UNITY_EDITOR
         /// <summary>
@@ -201,10 +204,10 @@ namespace Disguise.RenderStream.Parameters
         }
 
         /// <inheritdoc/>
-        public abstract void ApplyData(SceneCPUData sceneCPUData);
+        public abstract void ApplyData(SceneCPUData data);
         
         /// <inheritdoc/>
-        public abstract void ApplyData(SceneGPUData sceneGPUData);
+        public abstract void ApplyData(SceneGPUData data);
         
 #if UNITY_EDITOR
         /// <inheritdoc/>

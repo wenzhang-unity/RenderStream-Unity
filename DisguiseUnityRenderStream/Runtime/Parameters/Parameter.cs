@@ -9,8 +9,13 @@ namespace Disguise.RenderStream.Parameters
     [Serializable]
     class Parameter
     {
+        const string KeySeparator = " ";
+        
         [SerializeField]
         bool m_Enabled = true;
+        
+        [SerializeField]
+        int m_ID;
         
         [SerializeField]
         MemberInfoForRuntime m_MemberInfoForRuntime = new MemberInfoForRuntime();
@@ -26,19 +31,43 @@ namespace Disguise.RenderStream.Parameters
 #endif
         }
         
+        public int ID
+        {
+            get => m_ID;
+#if UNITY_EDITOR
+            set => m_ID = value;
+#endif
+        }
+        
         public IRemoteParameterWrapper RemoteParameterWrapper => m_RemoteParameterWrapper;
 
         public void OnEnable()
         {
             m_MemberInfoForRuntime.Apply(m_RemoteParameterWrapper);
         }
+
+        public static int ResolveIDFromSchema(ManagedRemoteParameter schemaParameter)
+        {
+            var key = schemaParameter.key;
+
+            if (string.IsNullOrWhiteSpace(key))
+                throw new InvalidOperationException("Empty parameter key");
+            
+            var separatorIndex = key.IndexOf(KeySeparator);
+            if (separatorIndex <= 0)
+                throw new InvalidOperationException("Incorrect key format: no separator found");
+            
+            var idString = key.Substring(0, separatorIndex + 1);
+
+            if (int.TryParse(idString, out int id))
+                return id;
+            else
+                throw new InvalidOperationException("Incorrect key format: first word was not an integer");
+        }
         
 #if UNITY_EDITOR
         [SerializeField]
         string m_Name;
-
-        [SerializeField]
-        int m_ID;
         
         [SerializeField]
         public bool m_HasCustomName;
@@ -68,12 +97,6 @@ namespace Disguise.RenderStream.Parameters
         {
             get => m_Name;
             set => m_Name = value;
-        }
-
-        public int ID
-        {
-            get => m_ID;
-            set => m_ID = value;
         }
         
         public UnityEngine.Object Object
@@ -222,9 +245,9 @@ namespace Disguise.RenderStream.Parameters
                 foreach (var p in wrapper.GetParametersForSchema())
                 {
                     // TODO handle "step"
-                    
+
                     var options = p.Options ?? new string[]{};
-                    parameters.Add(CreateManagedRemoteParameter(p.Type, group.DisguiseSchemaName, Name, ID.ToString(), p.Suffix, p.DefaultMin, p.DefaultMax, 1f, p.DefaultValue, options));
+                    parameters.Add(CreateManagedRemoteParameter(p.Type, group.DisguiseSchemaName, Name, Key, p.Suffix, p.DefaultMin, p.DefaultMax, 1f, p.DefaultValue, options));
                 }
 
                 parametersForSchema = parameters;
@@ -261,6 +284,8 @@ namespace Disguise.RenderStream.Parameters
             
             return parameter;
         }
+        
+        public string Key => ID.ToString() + KeySeparator + Name;
 #endif
     }
 }

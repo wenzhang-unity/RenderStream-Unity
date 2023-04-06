@@ -51,16 +51,16 @@ namespace Disguise.RenderStream.Parameters
             return parameters;
         }
         
-        public List<IRemoteParameterWrapper> GetRemoteParameterWrappers()
+        public List<(IRemoteParameterWrapper parameter, int parameterID)> GetRemoteParameterWrappers()
         {
             // Ensure that the execution order will be the same as the order defined in the schema:
             var parameters = GetParametersOrderedForSchema();
             
-            var wrappers = new List<IRemoteParameterWrapper>();
+            var wrappers = new List<(IRemoteParameterWrapper parameter, int parameterID)>();
 
             foreach (var (_, parameter) in parameters)
             {
-                wrappers.Add(parameter.RemoteParameterWrapper);
+                wrappers.Add((parameter.RemoteParameterWrapper, parameter.ID));
             }
 
             return wrappers;
