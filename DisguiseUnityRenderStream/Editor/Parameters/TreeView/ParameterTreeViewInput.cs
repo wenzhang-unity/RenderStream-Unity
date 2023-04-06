@@ -36,9 +36,6 @@ namespace Disguise.RenderStream.Parameters
         {
             var current = Event.current;
             
-            if (HasFocus() && current.type is EventType.ExecuteCommand)
-                Debug.Log(current.commandName);
-            
             if (HasFocus() &&
                 current.type is EventType.ExecuteCommand &&
                 current.commandName == "SelectAll")
