@@ -111,7 +111,7 @@ namespace Disguise.RenderStream
                 
                 if (DisguiseRenderStreamSettings.GetOrCreateSettings().enableUnityDebugWindowPresenter)
                 {
-                    var presenterGO = GameObject.Instantiate(UnityDebugWindowPresenter.LoadPrefab());
+                    var presenterGO = UnityDebugWindowPresenter.Create();
                     var presenter = presenterGO.GetComponent<UnityDebugWindowPresenter>();
                     var presenterRemoteParameters = presenter.GetRemoteParameterWrappers();
                     remoteParameters.InsertRange(0, presenterRemoteParameters);

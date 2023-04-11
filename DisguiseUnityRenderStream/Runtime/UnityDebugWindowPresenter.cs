@@ -95,9 +95,26 @@ namespace Disguise.RenderStream
         /// as well as the necessary <see cref="m_OutputPresenter"/> and <see cref="m_InputPresenter"/>.
         /// </summary>
         /// <returns></returns>
-        public static GameObject LoadPrefab()
+        public static GameObject Create()
         {
-            return Resources.Load<GameObject>(nameof(UnityDebugWindowPresenter));
+            var root = new GameObject(nameof(UnityDebugWindowPresenter));
+            var disguisePresenter = root.AddComponent<UnityDebugWindowPresenter>();
+
+            var outputPresenterGO = new GameObject("Output Presenter");
+            outputPresenterGO.transform.parent = root.transform;
+            var outputPresenter = outputPresenterGO.AddComponent<CameraCapturePresenter>();
+
+            var inputPresenterGO = new GameObject("Input Presenter");
+            inputPresenterGO.transform.parent = root.transform;
+            var inputPresenter = inputPresenterGO.AddComponent<Presenter>();
+            
+            // Inputs are already flipped for Unity
+            inputPresenter.autoFlipY = false;
+
+            disguisePresenter.m_OutputPresenter = outputPresenter;
+            disguisePresenter.m_InputPresenter = inputPresenter;
+
+            return root;
         }
 
         public List<(IRemoteParameterWrapper parameter, int parameterID)> GetRemoteParameterWrappers()
