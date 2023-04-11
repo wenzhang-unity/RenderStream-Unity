@@ -434,6 +434,41 @@ namespace Disguise.RenderStream.Parameters
 #endif
     }
     
+    [RemoteParameterWrapper(typeof(Matrix4x4))]
+    class Matrix4x4RemoteParameterWrapper : RemoteParameterWrapper<Matrix4x4>
+    {
+        public static Matrix4x4 ParseData(ReadOnlySpan<float> data)
+        {
+            var matrix = new Matrix4x4();
+            matrix.SetColumn(0, new Vector4(data[ 0], data[ 1], data[ 2], data[ 3]));
+            matrix.SetColumn(1, new Vector4(data[ 4], data[ 5], data[ 6], data[ 7]));
+            matrix.SetColumn(2, new Vector4(data[ 8], data[ 9], data[10], data[11]));
+            matrix.SetColumn(3, new Vector4(data[12], data[13], data[14], data[15]));
+            return matrix;
+        }
+        
+        public override void ApplyData(SceneCPUData data)
+        {
+            var matrix = ParseData(data.Numeric);
+            SetValue(matrix);
+        }
+
+        public override void ApplyData(SceneGPUData data)
+        {
+            
+        }
+        
+#if UNITY_EDITOR
+        public override IList<DisguiseRemoteParameter> GetParametersForSchema()
+        {
+            return new[]
+            {
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_TRANSFORM, 0f, 0f, 255f),
+            };
+        }
+#endif
+    }
+    
     [RemoteParameterWrapper(typeof(string))]
     class StringRemoteParameterWrapper : RemoteParameterWrapper<string>
     {
@@ -621,13 +656,7 @@ namespace Disguise.RenderStream.Parameters
     {
         public override void ApplyData(SceneCPUData data)
         {
-            var num = data.Numeric;
-            
-            var matrix = new Matrix4x4();
-            matrix.SetColumn(0, new Vector4(num[ 0], num[ 1], num[ 2], num[ 3]));
-            matrix.SetColumn(1, new Vector4(num[ 4], num[ 5], num[ 6], num[ 7]));
-            matrix.SetColumn(2, new Vector4(num[ 8], num[ 9], num[10], num[11]));
-            matrix.SetColumn(3, new Vector4(num[12], num[13], num[14], num[15]));
+            var matrix = Matrix4x4RemoteParameterWrapper.ParseData(data.Numeric);
 
             var transform = GetValue();
             transform.localPosition = new Vector3(matrix[0, 3], matrix[1, 3], matrix[2, 3]);
