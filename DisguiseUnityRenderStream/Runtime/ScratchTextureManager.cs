@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
@@ -5,8 +6,58 @@ using Debug = UnityEngine.Debug;
 
 namespace Disguise.RenderStream
 {
+    struct Texture2DDescriptor : IEquatable<Texture2DDescriptor>
+    {
+        public int Width;
+        public int Height;
+        public RSPixelFormat Format;
+        public bool Linear;
+
+        /// <summary>
+        /// Disguise uses a black 1x1 placeholder texture.
+        /// It's bound initially and during input parameter swapping.
+        /// We treat it as a persistent texture.
+        /// </summary>
+        public bool IsPlaceholderTexture => Width == 1 && Height == 1;
+        
+        public override bool Equals(object obj)
+        {
+            return obj is Texture2DDescriptor other && Equals(other);
+        }
+        
+        public override int GetHashCode()
+        {
+            return HashCode.Combine
+            (
+                Width,
+                Height,
+                (int)Format,
+                Linear ? 1 : 0
+            );
+        }
+
+        public bool Equals(Texture2DDescriptor other)
+        {
+            return
+                Width == other.Width &&
+                Height == other.Height &&
+                Format == other.Format &&
+                Linear == other.Linear;
+        }
+            
+        public static bool operator ==(Texture2DDescriptor lhs, Texture2DDescriptor rhs) => lhs.Equals(rhs);
+
+        public static bool operator !=(Texture2DDescriptor lhs, Texture2DDescriptor rhs) => !(lhs == rhs);
+
+        public override string ToString()
+        {
+            return $"{Width}x{Height} Format {Format} {(Linear ? "Linear" : "SRGB")}";
+        }
+    }
+    
     /// <summary>
-    /// A simpler version of <see cref="Disguise.RenderStream.TemporaryTexture2DManager"/> that doesn't need to manage texture lifetime.
+    /// Provides texture re-use across a frame.
+    /// Similar to <see cref="RenderTexture.GetTemporary(RenderTextureDescriptor)"/> but the texture lifetime is indefinite.
     /// </summary>
     abstract class ScratchTextureManager<TTexture>
     {

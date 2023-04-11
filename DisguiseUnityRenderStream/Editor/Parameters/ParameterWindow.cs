@@ -39,6 +39,7 @@ namespace Disguise.RenderStream.Parameters
         DisguiseParameterList m_ParameterList;
         ParameterTreeView m_TreeView;
 
+        bool m_GUICreated;
         ToolbarSearchField m_SearchField;
         Label m_SceneNameLabel;
         Button m_PatchSchemaButton;
@@ -105,6 +106,8 @@ namespace Disguise.RenderStream.Parameters
             
             m_IMGUIContainer = rootVisualElement.Q<IMGUIContainer>();
             m_IMGUIContainer.onGUIHandler = DoTreeView;
+
+            m_GUICreated = true;
 
             PollScene();
             rootVisualElement.schedule.Execute(PollScene).Every(250);
@@ -179,6 +182,10 @@ namespace Disguise.RenderStream.Parameters
         /// </summary>
         void PollScene()
         {
+            // During a build this function can be called in between window refreshes
+            if (!m_GUICreated)
+                return;
+            
             var lists = FindObjectsByType<DisguiseParameterList>(FindObjectsSortMode.InstanceID);
             m_ExtraParameterListNames.itemsSource = lists;
             
