@@ -145,7 +145,8 @@ namespace Disguise.RenderStream.Parameters
             m_MemberInfo = memberInfo;
             
 #if !ENABLE_IL2CPP
-            m_DynamicSetter = DynamicSetterCache<T>.GetSetter(m_MemberInfo);
+            if (m_MemberInfo != null)
+                m_DynamicSetter = DynamicSetterCache<T>.GetSetter(m_MemberInfo);
 #endif
         }
 
@@ -250,6 +251,17 @@ namespace Disguise.RenderStream.Parameters
                 return m_ThisObject;
             
             return m_MemberAccessor.GetValue();
+        }
+        
+        /// <summary>
+        /// Applies data to the target object and member.
+        /// </summary>
+        public void SetValue(T value)
+        {
+            if (m_ThisObject != null)
+                throw new InvalidOperationException("Cannot set the value on a 'this' object");
+            
+            m_MemberAccessor.SetValue(value);
         }
 
         /// <inheritdoc/>

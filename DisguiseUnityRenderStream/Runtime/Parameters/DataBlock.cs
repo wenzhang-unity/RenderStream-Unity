@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Disguise.RenderStream.Parameters
 {
@@ -31,19 +32,19 @@ namespace Disguise.RenderStream.Parameters
         /// <see cref="RemoteParameterType.RS_PARAMETER_TRANSFORM"/>
         /// in their order of declaration in the schema.
         /// </summary>
-        public DataBlock<float> Numeric;
+        public ValueTypeDataBlock<float> Numeric;
         
         /// <summary>
         /// Data from parameters of type <see cref="RemoteParameterType.RS_PARAMETER_TEXT"/>
         /// in their order of declaration in the schema.
         /// </summary>
-        public DataBlock<string> Text;
+        public ClassTypeDataBlock<string> Text;
         
         /// <summary>
         /// Data from parameters of type <see cref="RemoteParameterType.RS_PARAMETER_IMAGE"/>
         /// in their order of declaration in the schema.
         /// </summary>
-        public DataBlock<Texture> Textures;
+        public TextureDataBlock Textures;
         
         /// <summary>
         /// Configures remote parameters and their data buffers for the scene.
@@ -64,9 +65,9 @@ namespace Disguise.RenderStream.Parameters
                 IncrementByParameterSize(parameter.type, ref numNumericalParameters, ref numTextParameters, ref numTextureParameters);
             }
 
-            Numeric = new DataBlock<float>(numNumericalParameters);
-            Text = new DataBlock<string>(numTextParameters);
-            Textures = new DataBlock<Texture>(numTextureParameters);
+            Numeric = new ValueTypeDataBlock<float>(numNumericalParameters);
+            Text = new ClassTypeDataBlock<string>(numTextParameters);
+            Textures = new TextureDataBlock(numTextureParameters);
 
             var parameterWrapperIndex = 0;
             
@@ -147,9 +148,9 @@ namespace Disguise.RenderStream.Parameters
         /// <summary>
         /// Applies GPU data onto the scene's remote parameters.
         /// </summary>
-        public void ApplyGPUData()
+        public void ApplyGPUData(CommandBuffer commandBuffer)
         {
-            ApplyData(GPUData, (parameter, data) => parameter.ApplyData(data.ToReadOnly()));
+            ApplyData(GPUData, (parameter, data) => parameter.ApplyData(data.ToReadOnly(commandBuffer)));
         }
         
         void ApplyData<TData>(IList<TData> data, Action<IRemoteParameterWrapper, TData> applyData) where TData : ChangeTracker
@@ -232,9 +233,9 @@ namespace Disguise.RenderStream.Parameters
     {
         public ReadOnlyMemory<Texture> Textures;
         
-        public SceneGPUData ToReadOnly()
+        public SceneGPUData ToReadOnly(CommandBuffer commandBuffer)
         {
-            return new SceneGPUData(Textures.Span);
+            return new SceneGPUData(commandBuffer, Textures.Span);
         }
     }
     
@@ -258,10 +259,12 @@ namespace Disguise.RenderStream.Parameters
     /// </summary>
     ref struct SceneGPUData
     {
+        public readonly CommandBuffer CommandBuffer;
         public readonly ReadOnlySpan<Texture> Textures;
         
-        public SceneGPUData(ReadOnlySpan<Texture> textures)
+        public SceneGPUData(CommandBuffer commandBuffer, ReadOnlySpan<Texture> textures)
         {
+            CommandBuffer = commandBuffer;
             Textures = textures;
         }
     }
@@ -269,17 +272,24 @@ namespace Disguise.RenderStream.Parameters
     /// <summary>
     /// Represents a flat list of data received from Disguise.
     /// </summary>
-    class DataBlock<T>
+    abstract class DataBlock<T>
     {
         /// <summary>
         /// Holds a flat list of data received from Disguise.
         /// </summary>
-        readonly T[] m_Data;
+        public ReadOnlyMemory<T> Data => new ReadOnlyMemory<T>(m_Data);
+        
+        /// <summary>
+        /// Holds a flat list of data received from Disguise.
+        /// </summary>
+        protected readonly T[] m_Data;
         
         /// <summary>
         /// The <see cref="ChangeTracker"/>s associated to each element in <see cref="m_Data"/>.
         /// </summary>
         readonly ChangeTracker[] m_ChangeTrackers;
+
+        public int Length => m_Data.Length;
         
         public DataBlock(int length)
         {
@@ -302,9 +312,16 @@ namespace Disguise.RenderStream.Parameters
 
         public void SetValue(int index, T value)
         {
-            if (!m_Data[index].Equals(value))
+            var prevData = m_Data[index];
+            if (NeedsSignalChange(prevData, value))
                 SignalChange(index);
             
+            m_Data[index] = value;
+        }
+        
+        public void SetChangedValue(int index, T value)
+        {
+            SignalChange(index);
             m_Data[index] = value;
         }
         
@@ -320,14 +337,17 @@ namespace Disguise.RenderStream.Parameters
 
             for (var i = 0; data.MoveNext() && i < m_Data.Length; i++)
             {
+                var prevData = m_Data[i];
                 var newData = data.Current;
                 
-                if (!m_Data[i].Equals(newData))
+                if (NeedsSignalChange(prevData, newData))
                     SignalChange(i);
                 
                 m_Data[i] = newData;
             }
         }
+
+        protected abstract bool NeedsSignalChange(T prevValue, T newValue);
 
         void SignalChange(int index)
         {
@@ -337,6 +357,71 @@ namespace Disguise.RenderStream.Parameters
                 throw new InvalidOperationException($"No change tracker registered for data element {index}");
             
             changeTracker.SignalChange();
+        }
+    }
+    
+    class ValueTypeDataBlock<T> : DataBlock<T> where T : struct, IEquatable<T>
+    {
+        public ValueTypeDataBlock(int length) : base(length)
+        {
+            
+        }
+
+        protected override bool NeedsSignalChange(T prevValue, T newValue)
+        {
+            return prevValue.Equals(newValue);
+        }
+    }
+    
+    class ClassTypeDataBlock<T> : DataBlock<T> where T : class, IEquatable<T>
+    {
+        public ClassTypeDataBlock(int length) : base(length)
+        {
+            
+        }
+
+        protected override bool NeedsSignalChange(T prevValue, T newValue)
+        {
+            if (prevValue == null)
+                return newValue != null;
+            
+            return prevValue.Equals(newValue);
+        }
+    }
+    
+    class TextureDataBlock : DataBlock<Texture>
+    {
+        readonly ImageFrameData[] m_ImageFrameData;
+
+        public Texture GetOrCreateTexture(int index, ImageFrameData imageFrameData)
+        {
+            var currentImageFrameData = m_ImageFrameData[index];
+
+            if (!DisguiseTextures.SameImageFrameDataProperties(currentImageFrameData, imageFrameData))
+            {
+                var newTexture = DisguiseTextures.CreateTexture(
+                    (int)imageFrameData.width,
+                    (int)imageFrameData.height,
+                    imageFrameData.format,
+                    false,
+                    null);
+
+                m_Data[index] = newTexture;
+                m_ImageFrameData[index] = imageFrameData;
+                return newTexture;
+            }
+
+            return m_Data[index];
+        }
+        
+        public TextureDataBlock(int length) : base(length)
+        {
+            m_ImageFrameData = new ImageFrameData[length];
+        }
+
+        protected override bool NeedsSignalChange(Texture prevValue, Texture newValue)
+        {
+            return true;
         }
     }
 }

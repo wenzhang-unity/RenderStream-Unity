@@ -211,7 +211,7 @@ namespace Disguise.RenderStream
         {
             foreach (var scene in schema.scenes)
             {
-                var presenterParameters = UnityDebugWindowPresenter.GetManagedRemoteParameters(schema, scene);
+                var presenterParameters = UnityDebugWindowPresenter.GetParametersOrderedForSchema(schema, scene);
                 scene.parameters = presenterParameters.Concat(scene.parameters).ToArray();
             }
         }

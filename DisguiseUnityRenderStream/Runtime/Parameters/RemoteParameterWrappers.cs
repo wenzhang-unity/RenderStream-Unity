@@ -651,5 +651,77 @@ namespace Disguise.RenderStream.Parameters
 #endif
     }
     
-    // TODO: Add wrapper for Texture
+    [RemoteParameterWrapper(typeof(Texture))]
+    class TextureRemoteParameterWrapper : RemoteParameterWrapper<Texture>
+    {
+        RenderTexture m_Data;
+        
+        public override void ApplyData(SceneCPUData data)
+        {
+            
+        }
+
+        public override void ApplyData(SceneGPUData data)
+        {
+            var disguiseTexture = data.Textures[0];
+
+            var needsToUpdateBackingRT = m_Data != null && !DisguiseTextures.RenderTextureMatchesTexture(m_Data, disguiseTexture);
+            
+            if (m_Data == null || needsToUpdateBackingRT)
+            {
+                m_Data = new RenderTexture(disguiseTexture.width, disguiseTexture.height, 0, disguiseTexture.graphicsFormat);
+            }
+            
+            SetValue(m_Data);
+            
+            DisguiseTextures.ConvertDisguiseTexture(disguiseTexture, m_Data, data.CommandBuffer);
+        }
+        
+#if UNITY_EDITOR
+        public override IList<DisguiseRemoteParameter> GetParametersForSchema()
+        {
+            return new[]
+            {
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_IMAGE, 0f, 0f, 255f),
+            };
+        }
+#endif
+    }
+    
+    [RemoteParameterWrapper(typeof(RenderTexture))]
+    class RenderTextureRemoteParameterWrapper : ObjectRemoteParameterWrapper<RenderTexture>
+    {
+        RenderTexture m_Data;
+        
+        public override void ApplyData(SceneCPUData data)
+        {
+            
+        }
+
+        public override void ApplyData(SceneGPUData data)
+        {
+            var disguiseTexture = data.Textures[0];
+            var renderTexture = GetValue();
+
+            var needsToUpdateBackingRT = m_Data != null && !DisguiseTextures.RenderTextureMatchesTexture(m_Data, disguiseTexture);
+            
+            if (renderTexture == null || needsToUpdateBackingRT)
+            {
+                m_Data = new RenderTexture(disguiseTexture.width, disguiseTexture.height, 0, disguiseTexture.graphicsFormat);
+                SetValue(m_Data);
+            }
+
+            DisguiseTextures.ConvertDisguiseTexture(disguiseTexture, renderTexture, data.CommandBuffer);
+        }
+        
+#if UNITY_EDITOR
+        public override IList<DisguiseRemoteParameter> GetParametersForSchema()
+        {
+            return new[]
+            {
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_IMAGE, 0f, 0f, 255f),
+            };
+        }
+#endif
+    }
 }

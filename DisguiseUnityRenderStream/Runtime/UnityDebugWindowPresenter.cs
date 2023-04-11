@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Disguise.RenderStream.Utils;
+using Disguise.RenderStream.Parameters;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -40,11 +41,12 @@ namespace Disguise.RenderStream
             Clamp
         }
 
-        const string k_NoneTextureLabel = "None";
+        private const int k_SelectedParameterID = 0;
+        private const int k_ResizeStrategyParameterID = 1;
 
         /// <summary>
         /// The index of the selection in the texture dropdown to present to the screen.
-        /// The dropdown choices are generated inside <see cref="GetManagedRemoteParameters"/>, as a concatenated list of:
+        /// The dropdown choices are generated inside <see cref="GetParametersOrderedForSchema"/>, as a concatenated list of:
         /// None + Channels (output) + Live textures (input).
         /// </summary>
         public int Selected
@@ -75,7 +77,7 @@ namespace Disguise.RenderStream
         Presenter m_InputPresenter;
 
         CameraCapture[] m_Outputs = {};
-        RenderTexture[] m_Inputs = {};
+        ReadOnlyMemory<Texture> m_Inputs;
 
         static BlitStrategy.Strategy PresenterStrategyToBlitStrategy(PresenterResizeStrategies strategy) => strategy switch
         {
@@ -97,60 +99,79 @@ namespace Disguise.RenderStream
         {
             return Resources.Load<GameObject>(nameof(UnityDebugWindowPresenter));
         }
-        
+
+        public List<(IRemoteParameterWrapper parameter, int parameterID)> GetRemoteParameterWrappers()
+        {
+            var selected = new IntRemoteParameterWrapper();
+            selected.SetTarget(this, typeof(UnityDebugWindowPresenter).GetProperty(nameof(Selected)));
+            
+            var resizeStrategy = new EnumRemoteParameterWrapper();
+            resizeStrategy.SetTarget(this, typeof(UnityDebugWindowPresenter).GetProperty(nameof(ResizeStrategy)));
+
+            return new List<(IRemoteParameterWrapper parameter, int parameterID)>
+            {
+                (selected, k_SelectedParameterID),
+                (resizeStrategy, k_ResizeStrategyParameterID),
+            };
+        }
+
 #if UNITY_EDITOR
+        const string k_GroupName = "Unity Debug Window Presenter";
+        const string k_NoneTextureLabel = "None";
+        
+        class MockUnityDebugWindowPresenter : UnityEngine.Object
+        {
+            public PresenterResizeStrategies ResizeStrategy = PresenterResizeStrategies.Fit;
+            public int Selected;
+
+            public MockUnityDebugWindowPresenter()
+            {
+                Debug.Assert(nameof(ResizeStrategy) == nameof(UnityDebugWindowPresenter.ResizeStrategy));
+                Debug.Assert(nameof(Selected) == nameof(UnityDebugWindowPresenter.Selected));
+            }
+        }
+        
         /// <summary>
         /// Returns the list of remote parameters to control the presenter.
-        /// The parameters are pre-configured in the prefab used by <see cref="LoadPrefab"/>.
         /// </summary>
         /// <remarks>
         /// The choices for the texture selection dropdown are scene-specific and correspond to a concatenated list of:
         /// None + Channels (output) + Live textures (input).
         /// </remarks>
-        public static List<ManagedRemoteParameter> GetManagedRemoteParameters(ManagedSchema schema, ManagedRemoteParameters sceneSchema)
+        public static List<ManagedRemoteParameter> GetParametersOrderedForSchema(ManagedSchema schema, ManagedRemoteParameters sceneSchema)
         {
-            // TODO fix presenter remote parameters
-            return new List<ManagedRemoteParameter>();
+            var mockInstance = new MockUnityDebugWindowPresenter();
+            
+            var liveTextureNames = sceneSchema.parameters.Where(
+                x => x.type == RemoteParameterType.RS_PARAMETER_IMAGE).Select(
+                x => x.displayName
+            );
+            var options = new List<string> { k_NoneTextureLabel };
+            options.AddRange(schema.channels);
+            options.AddRange(liveTextureNames);
+            
+            var selected = new IntRemoteParameterWrapper();
+            selected.SetTarget(mockInstance, mockInstance.GetType().GetField(nameof(MockUnityDebugWindowPresenter.Selected)));
+            var selectedDesc = selected.GetParametersForSchema()[0];
+            var selectedSchema = Parameter.CreateManagedRemoteParameter(
+                selectedDesc,
+                k_GroupName,
+                ObjectNames.NicifyVariableName(nameof(MockUnityDebugWindowPresenter.Selected)),
+                $"{k_SelectedParameterID}{Parameter.KeySeparator}{nameof(UnityDebugWindowPresenter)}.{nameof(MockUnityDebugWindowPresenter.Selected)}"
+            );
+            selectedSchema.options = options.ToArray();
 
-            // var prefab = LoadPrefab();
-            // var parameters = prefab.GetComponent<DisguiseRemoteParameters>();
-            // var managedParameters = parameters.exposedParameters();
-            //
-            // foreach (var parameter in managedParameters)
-            // {
-            //     // Discard the name of the GameObject, keep only the field ex:
-            //     // "DisguisePresenter Mode" => "Mode"
-            //     parameter.displayName = parameter.displayName.Substring(parameter.displayName.IndexOf(" ") + 1);
-            //
-            //     // Generate dropdown choices as a concatenated list of: None + Channels (output) + Live textures (input)
-            //     if (parameter.displayName == nameof(Selected))
-            //     {
-            //         List<string> options = new List<string>();
-            //         options.Add(k_NoneTextureLabel);
-            //
-            //         foreach (var channel in schema.channels)
-            //         {
-            //             options.Add(channel);
-            //         }
-            //
-            //         var remoteParameters = FindObjectsByType<DisguiseRemoteParameters>(FindObjectsSortMode.None);
-            //         foreach (var sceneParameter in sceneSchema.parameters)
-            //         {
-            //             var remoteParams = Array.Find(remoteParameters, rp => sceneParameter.key.StartsWith(rp.prefix));
-            //             var field = new ObjectField();
-            //             field.info = remoteParams.GetMemberInfoFromManagedParameter(sceneParameter);
-            //
-            //             if (field.FieldType == typeof(Texture))
-            //             {
-            //                 options.Add(sceneParameter.displayName);
-            //             }
-            //         }
-            //
-            //         parameter.options = options.ToArray();
-            //     }
-            // }
-            //
-            // return managedParameters;
+            var resizeStrategy = new EnumRemoteParameterWrapper();
+            resizeStrategy.SetTarget(mockInstance, mockInstance.GetType().GetField(nameof(MockUnityDebugWindowPresenter.ResizeStrategy)));
+            var resizeStrategyDesc = resizeStrategy.GetParametersForSchema()[0];
+            var resizeStrategySchema = Parameter.CreateManagedRemoteParameter(
+                resizeStrategyDesc,
+                k_GroupName,
+                ObjectNames.NicifyVariableName(nameof(MockUnityDebugWindowPresenter.ResizeStrategy)),
+                $"{k_ResizeStrategyParameterID}{Parameter.KeySeparator}{nameof(UnityDebugWindowPresenter)}.{nameof(MockUnityDebugWindowPresenter.ResizeStrategy)}"
+            );
+
+            return new List<ManagedRemoteParameter>{ selectedSchema, resizeStrategySchema };
         }
 #endif
 
@@ -166,6 +187,9 @@ namespace Disguise.RenderStream
         {
             DisguiseRenderStream.SceneLoaded += RefreshInput;
             DisguiseRenderStream.StreamsChanged += RefreshOutput;
+            
+            RefreshOutput();
+            RefreshInput();
         }
         
         void OnDisable()
@@ -185,11 +209,12 @@ namespace Disguise.RenderStream
                 m_InputPresenter.enabled = false;
                 m_OutputPresenter.cameraCapture = m_Outputs[outputIndex];
             }
-            else if (VirtualIndexToInputIndex(Selected) is { } inputIndex)
+            else if (VirtualIndexToInputIndex(Selected) is { } inputIndex &&
+                     m_Inputs.Span[inputIndex] is { } inputTexture)
             {
                 m_InputPresenter.enabled = true;
                 m_OutputPresenter.enabled = false;
-                m_InputPresenter.source = m_Inputs[inputIndex];
+                m_InputPresenter.source = inputTexture;
             }
             else
             {
@@ -202,7 +227,7 @@ namespace Disguise.RenderStream
 
         /// <summary>
         /// Maps a virtual index like <see cref="Selected"/> to a real index into <see cref="m_Outputs"/>.
-        /// The virtual list is described in <see cref="GetManagedRemoteParameters"/>.
+        /// The virtual list is described in <see cref="GetParametersOrderedForSchema"/>.
         /// </summary>
         /// <returns>
         /// An index into <see cref="m_Outputs"/>, or null when no output is selected.
@@ -219,7 +244,7 @@ namespace Disguise.RenderStream
         
         /// <summary>
         /// Maps a virtual index like <see cref="Selected"/> to a real index into <see cref="m_Inputs"/>.
-        /// The virtual list is described in <see cref="GetManagedRemoteParameters"/>.
+        /// The virtual list is described in <see cref="GetParametersOrderedForSchema"/>.
         /// </summary>
         /// <returns>
         /// An index into <see cref="m_Inputs"/>, or null when no input is selected.
@@ -243,7 +268,7 @@ namespace Disguise.RenderStream
         
         void RefreshInput()
         {
-            m_Inputs = DisguiseRenderStream.Instance.InputTextures.ToArray();
+            m_Inputs = DisguiseRenderStream.Instance.InputTextures;
         }
     }
 }

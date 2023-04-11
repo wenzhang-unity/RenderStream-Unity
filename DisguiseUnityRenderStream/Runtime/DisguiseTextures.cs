@@ -44,5 +44,42 @@ namespace Disguise.RenderStream
             
             return texture;
         }
+        
+        public static void ConvertDisguiseTexture(Texture src, RenderTexture dst, CommandBuffer cmd)
+        {
+            var flipY = SystemInfo.graphicsUVStartsAtTop;
+            var scale = flipY
+                ? new Vector2(1f, -1f)
+                : Vector2.one;
+            var offset = flipY
+                ? new Vector2(0f, 1f)
+                : Vector2.zero;
+            
+            cmd.Blit(src, dst, scale, offset);
+            cmd.IncrementUpdateCount(dst);
+        }
+
+        public static bool RenderTextureMatchesTexture(RenderTexture rt, Texture texture)
+        {
+            return
+                rt.width == texture.width &&
+                rt.height == texture.height &&
+                rt.graphicsFormat == texture.graphicsFormat;
+        }
+        
+        public static bool SameImageFrameDataProperties(ImageFrameData lhs, ImageFrameData rhs)
+        {
+            return
+                lhs.width == rhs.width &&
+                lhs.height == rhs.height &&
+                lhs.format == rhs.format;
+        }
+        
+        public static bool IsNewImageFrameData(ImageFrameData lhs, ImageFrameData rhs)
+        {
+            return
+                lhs.imageId != rhs.imageId ||
+                !SameImageFrameDataProperties(lhs, rhs);
+        }
     }
 }

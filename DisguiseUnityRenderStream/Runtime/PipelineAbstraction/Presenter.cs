@@ -59,7 +59,7 @@ namespace Disguise.RenderStream
         const string k_profilerClearTag = "Disguise Presenter Clear";
 
         [SerializeField]
-        RenderTexture m_source;
+        Texture m_source;
         
         [SerializeField]
         SourceColorSpace m_sourceColorSpace = SourceColorSpace.Auto;
@@ -96,7 +96,7 @@ namespace Disguise.RenderStream
         /// <summary>
         /// The texture to present. Can be any 2D texture.
         /// </summary>
-        public RenderTexture source
+        public Texture source
         {
             get => m_source;
             set => m_source = value;

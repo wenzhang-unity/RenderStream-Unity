@@ -9,7 +9,7 @@ namespace Disguise.RenderStream.Parameters
     [Serializable]
     class Parameter
     {
-        const string KeySeparator = " ";
+        public const string KeySeparator = " ";
         
         [SerializeField]
         bool m_Enabled = true;
@@ -253,12 +253,10 @@ namespace Disguise.RenderStream.Parameters
             {
                 var parameters = new List<ManagedRemoteParameter>();
                 
-                foreach (var p in wrapper.GetParametersForSchema())
+                foreach (var parameterDesc in wrapper.GetParametersForSchema())
                 {
-                    // TODO handle "step"
-
-                    var options = p.Options ?? new string[]{};
-                    parameters.Add(CreateManagedRemoteParameter(p.Type, group.DisguiseSchemaName, Name, Key, p.Suffix, p.DefaultMin, p.DefaultMax, 1f, p.DefaultValue, options));
+                    var schemaParameter = CreateManagedRemoteParameter(parameterDesc, group.DisguiseSchemaName, Name, Key);
+                    parameters.Add(schemaParameter);
                 }
 
                 parametersForSchema = parameters;
@@ -269,25 +267,27 @@ namespace Disguise.RenderStream.Parameters
             return false;
         }
         
-        ManagedRemoteParameter CreateManagedRemoteParameter(RemoteParameterType type, string group, string displayName, string key, string suffix, float min, float max, float step, object defaultValue, string[] options)
+        public static ManagedRemoteParameter CreateManagedRemoteParameter(DisguiseRemoteParameter parameterDesc, string group, string displayName, string key)
         {
             Debug.Assert(!string.IsNullOrWhiteSpace(group));
             Debug.Assert(!string.IsNullOrWhiteSpace(displayName));
             Debug.Assert(!string.IsNullOrWhiteSpace(key));
             
-            var processedKey = key + (String.IsNullOrEmpty(suffix) ? string.Empty : "_" + suffix);
-            var processedDisplayName = displayName + (String.IsNullOrEmpty(suffix) ? string.Empty : " " + suffix);
-        
+            var options = parameterDesc.Options ?? Array.Empty<string>();
+            
+            var processedKey = key + (String.IsNullOrEmpty(parameterDesc.Suffix) ? string.Empty : "_" + parameterDesc.Suffix);
+            var processedDisplayName = displayName + (String.IsNullOrEmpty(parameterDesc.Suffix) ? string.Empty : " " + parameterDesc.Suffix);
+            
             var parameter = new ManagedRemoteParameter
             {
                 group = group,
                 displayName = processedDisplayName,
                 key = processedKey,
-                type = type,
-                min = min,
-                max = max,
-                step = step,
-                defaultValue = defaultValue,
+                type = parameterDesc.Type,
+                min = parameterDesc.DefaultMin,
+                max = parameterDesc.DefaultMax,
+                step = 1f, // TODO handle step
+                defaultValue = parameterDesc.DefaultValue,
                 options = options,
                 dmxOffset = -1,
                 dmxType = RemoteParameterDmxType.RS_DMX_16_BE

@@ -60,7 +60,6 @@ GameObject:
   m_Component:
   - component: {fileID: 360651681440703413}
   - component: {fileID: 360651681440703412}
-  - component: {fileID: 360651681440703411}
   m_Layer: 0
   m_Name: UnityDebugWindowPresenter
   m_TagString: Untagged
@@ -101,27 +100,6 @@ MonoBehaviour:
   m_ResizeStrategy: 3
   m_OutputPresenter: {fileID: 360651681370543318}
   m_InputPresenter: {fileID: 360651682882557474}
---- !u!114 &360651681440703411
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 360651681440703410}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: af5276befa899474cb1ba07f3cd321ba, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  exposedObject: {fileID: 360651681440703412}
-  prefix: unity-debug-window-presenter
-  fields:
-  - exposed: 1
-    fieldName: Selected
-    groupName: Unity Debug Window Presenter
-  - exposed: 1
-    fieldName: Resize Strategy
-    groupName: Unity Debug Window Presenter
 --- !u!1 &360651682882557473
 GameObject:
   m_ObjectHideFlags: 0
@@ -169,5 +147,5 @@ MonoBehaviour:
   m_source: {fileID: 0}
   m_sourceColorSpace: -1
   m_strategy: 6
-  m_autoFlipY: 1
+  m_autoFlipY: 0
   m_clearScreen: 1

@@ -94,12 +94,6 @@ namespace Disguise.RenderStream
 
         void OnSceneLoaded(Scene loadedScene, LoadSceneMode mode)
         {
-            if (DisguiseRenderStreamSettings.GetOrCreateSettings().enableUnityDebugWindowPresenter)
-            {
-                // TODO fix presenter remote parameters
-                // GameObject.Instantiate(UnityDebugWindowPresenter.LoadPrefab());
-            }
-            
             CreateStreams();
 
             var sceneIndex = DisguiseRenderStreamSettings.GetOrCreateSettings().sceneControl switch
@@ -114,6 +108,15 @@ namespace Disguise.RenderStream
             if (DisguiseParameterList.FindInstance() is { } parameterList)
             {
                 var remoteParameters = parameterList.GetRemoteParameterWrappers();
+                
+                if (DisguiseRenderStreamSettings.GetOrCreateSettings().enableUnityDebugWindowPresenter)
+                {
+                    var presenterGO = GameObject.Instantiate(UnityDebugWindowPresenter.LoadPrefab());
+                    var presenter = presenterGO.GetComponent<UnityDebugWindowPresenter>();
+                    var presenterRemoteParameters = presenter.GetRemoteParameterWrappers();
+                    remoteParameters.InsertRange(0, presenterRemoteParameters);
+                }
+                
                 sceneData.AssignRemoteParameters(remoteParameters, spec);
             }
             else
@@ -217,27 +220,13 @@ namespace Disguise.RenderStream
         
             var spec = m_Schema.scenes[receivedFrameData.scene];
             var sceneData = m_SceneData[receivedFrameData.scene];
-            var numNumericalParameters = 0;
-            var numTextParameters = 0;
-            
-            foreach (var parameter in spec.parameters)
-            {
-                if (parameter.type == RemoteParameterType.RS_PARAMETER_NUMBER)
-                    ++numNumericalParameters;
-                else if (parameter.type == RemoteParameterType.RS_PARAMETER_POSE || parameter.type == RemoteParameterType.RS_PARAMETER_TRANSFORM)
-                    numNumericalParameters += 16;
-                else if (parameter.type == RemoteParameterType.RS_PARAMETER_TEXT)
-                    ++numTextParameters;
-                else
-                    throw new NotSupportedException();
-            }
 
-            using var parameters = new NativeArray<float>(numNumericalParameters, Allocator.Temp);
+            using var parameters = new NativeArray<float>(sceneData.Numeric.Length, Allocator.Temp);
             if (PluginEntry.instance.GetFrameParameters(spec.hash, parameters.AsSpan()) == RS_ERROR.RS_ERROR_SUCCESS)
             {
                 sceneData.Numeric.SetData(parameters.GetEnumerator(), parameters.Length);
 
-                for (uint i = 0; i < numTextParameters; i++)
+                for (uint i = 0; i < sceneData.Text.Length; i++)
                 {
                     var value = "";
                     if (PluginEntry.instance.getFrameText(spec.hash, i, ref value) == RS_ERROR.RS_ERROR_SUCCESS)
@@ -281,90 +270,81 @@ namespace Disguise.RenderStream
         // Updates the RenderTextures assigned to image parameters on the render thread to avoid stalling the main thread
         void OnBeginContextRendering(ScriptableRenderContext context, List<Camera> cameras)
         {
-            // TODO fix live texture parameters
+            if (!HasNewFrameData)
+                return;
             
-            // if (!HasNewFrameData)
-            //     return;
-            //
-            // if (LatestFrameData.scene >= m_Schema.scenes.Length)
-            //     return;
-            //
-            // var spec = m_Schema.scenes[LatestFrameData.scene];
-            // var images = m_SceneFields[LatestFrameData.scene].images;
-            // if (images == null)
-            //     return;
-            //
-            // // Only run once per frame for the main render context
-            // if (m_HasUpdatedLiveTexturesThisFrame)
-            //     return;
-            // foreach (var camera in cameras)
-            // {
-            //     if (camera.cameraType != CameraType.Game)
-            //         return;
-            // }
-            // m_HasUpdatedLiveTexturesThisFrame = true;
-            //
-            // var nImageParameters = spec.parameters.Count(t => t.type == RemoteParameterType.RS_PARAMETER_IMAGE);
-            //
-            // using var imageData = new NativeArray<ImageFrameData>(nImageParameters, Allocator.Temp);
-            // if (PluginEntry.instance.GetFrameImageData(spec.hash, imageData.AsSpan()) != RS_ERROR.RS_ERROR_SUCCESS)
-            //     return;
-            //
-            // CommandBuffer cmd = null;
-            // var i = 0;
-            // foreach (var field in images)
-            // {
-            //     if (field.GetValue() is RenderTexture renderTexture)
-            //     {
-            //         // We may be temped to use RenderTexture instead of Texture2D for the shared textures.
-            //         // RenderTextures are always stored as typeless texture resources though, which aren't supported
-            //         // by CUDA interop (used by Disguise under the hood):
-            //         // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__D3D11.html#group__CUDART__D3D11_1g85d07753780643584b8febab0370623b
-            //         // Texture2D apply their GraphicsFormat to their texture resources.
-            //
-            //         var sharedTexture = TemporaryTexture2DManager.Instance.Get(new Texture2DDescriptor()
-            //         {
-            //             Width = (int)imageData[i].width,
-            //             Height = (int)imageData[i].height,
-            //             Format = imageData[i].format,
-            //             Linear = true
-            //         });
-            //
-            //         NativeRenderingPlugin.InputImageData data = new NativeRenderingPlugin.InputImageData()
-            //         {
-            //             m_rs_getFrameImage = PluginEntry.instance.rs_getFrameImage_ptr,
-            //             m_ImageId = imageData[i].imageId,
-            //             m_Texture = sharedTexture.GetNativeTexturePtr()
-            //         };
-            //
-            //         if (NativeRenderingPlugin.InputImageDataPool.TryPreserve(data, out var dataPtr))
-            //         {
-            //             if (cmd == null)
-            //                 cmd = CommandBufferPool.Get($"Receiving Disguise Image Parameters");
-            //
-            //             cmd.IssuePluginEventAndData(
-            //                 NativeRenderingPlugin.GetRenderEventCallback(),
-            //                 NativeRenderingPlugin.GetEventID(NativeRenderingPlugin.EventID.InputImage),
-            //                 dataPtr);
-            //             cmd.IncrementUpdateCount(sharedTexture);
-            //
-            //             cmd.Blit(sharedTexture, renderTexture, new Vector2(1.0f, -1.0f), new Vector2(0.0f, 1.0f));
-            //             cmd.IncrementUpdateCount(renderTexture);
-            //         }
-            //         else
-            //         {
-            //             Debug.LogError($"DisguiseRenderStream: {nameof(NativeRenderingPlugin)}.{nameof(NativeRenderingPlugin.InputImageData)} pool exceeded, skipping input texture '{field.info.Name}'");
-            //         }
-            //     }
-            //
-            //     ++i;
-            // }
-            //
-            // if (cmd != null)
-            // {
-            //     context.ExecuteCommandBuffer(cmd);
-            //     CommandBufferPool.Release(cmd);
-            // }
+            if (LatestFrameData.scene >= m_Schema.scenes.Length)
+                return;
+            
+            var spec = m_Schema.scenes[LatestFrameData.scene];
+            var sceneData = m_SceneData[LatestFrameData.scene];
+            
+            // Only run once per frame for the main render context
+            if (m_HasUpdatedLiveTexturesThisFrame)
+                return;
+            foreach (var camera in cameras)
+            {
+                if (camera.cameraType != CameraType.Game)
+                    return;
+            }
+            m_HasUpdatedLiveTexturesThisFrame = true;
+            
+            using var imageData = new NativeArray<ImageFrameData>(sceneData.Textures.Length, Allocator.Temp);
+            if (PluginEntry.instance.GetFrameImageData(spec.hash, imageData.AsSpan()) != RS_ERROR.RS_ERROR_SUCCESS)
+                return;
+            
+            CommandBuffer cmd = null;
+            for (var i = 0; i < sceneData.Textures.Length; i++)
+            {
+                var info = imageData[i];
+                if (info.format == RSPixelFormat.RS_FMT_INVALID)
+                {
+                    Debug.LogError($"DisguiseRenderStream: skipping input texture {i} with {nameof(RSPixelFormat)}.{nameof(RSPixelFormat.RS_FMT_INVALID)}");
+                    continue;
+                }
+
+                // We may be temped to use RenderTexture instead of Texture2D for the shared textures.
+                // RenderTextures are always stored as typeless texture resources though, which aren't supported
+                // by CUDA interop (used by Disguise under the hood):
+                // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__D3D11.html#group__CUDART__D3D11_1g85d07753780643584b8febab0370623b
+                // Texture2D apply their GraphicsFormat to their texture resources.
+
+                var sharedTexture = sceneData.Textures.GetOrCreateTexture(i, info);
+
+                NativeRenderingPlugin.InputImageData data = new NativeRenderingPlugin.InputImageData()
+                {
+                    m_rs_getFrameImage = PluginEntry.instance.rs_getFrameImage_ptr,
+                    m_ImageId = info.imageId,
+                    m_Texture = sharedTexture.GetNativeTexturePtr()
+                };
+
+                if (NativeRenderingPlugin.InputImageDataPool.TryPreserve(data, out var dataPtr))
+                {
+                    cmd ??= CommandBufferPool.Get($"Receiving Disguise Image Parameters");
+
+                    cmd.IssuePluginEventAndData(
+                        NativeRenderingPlugin.GetRenderEventCallback(),
+                        NativeRenderingPlugin.GetEventID(NativeRenderingPlugin.EventID.InputImage),
+                        dataPtr);
+                    cmd.IncrementUpdateCount(sharedTexture);
+
+                    sceneData.Textures.SetChangedValue(i, sharedTexture);
+                }
+                else
+                {
+                    Debug.LogError($"DisguiseRenderStream: {nameof(NativeRenderingPlugin)}.{nameof(NativeRenderingPlugin.InputImageData)} pool exceeded, skipping input texture {i}");
+                }
+            }
+
+            if (cmd != null)
+            {
+                context.ExecuteCommandBuffer(cmd);
+                CommandBufferPool.Release(cmd);
+                
+                var gpuDataCmd = CommandBufferPool.Get($"Applying Disguise GPU data");
+                sceneData.ApplyGPUData(gpuDataCmd);
+                context.ExecuteCommandBuffer(gpuDataCmd);
+            }
         }
 
         static Camera[] getTemplateCameras()
@@ -392,21 +372,14 @@ namespace Disguise.RenderStream
 
         public StreamDescription[] Streams { get; private set; } = { };
         
-        public IEnumerable<RenderTexture> InputTextures
+        public ReadOnlyMemory<Texture> InputTextures
         {
             get
             {
-                // TODO fix live texture remote parameters
-                return Enumerable.Empty<RenderTexture>();
+                if (LatestFrameData.scene > m_SceneData.Length)
+                    return Array.Empty<Texture>();
                 
-                // if (LatestFrameData.scene > m_SceneFields.Length)
-                //     return Enumerable.Empty<RenderTexture>();
-                //
-                // var images = m_SceneFields[LatestFrameData.scene].images;
-                // if (images == null)
-                //     return Enumerable.Empty<RenderTexture>();
-                //
-                // return images.Select(x => x.GetValue() as RenderTexture);
+                return m_SceneData[LatestFrameData.scene].Textures.Data;
             }
         }
 

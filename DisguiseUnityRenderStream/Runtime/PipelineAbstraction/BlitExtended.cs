@@ -101,7 +101,7 @@ class BlitExtended
     /// <summary>
     /// Similar to <see cref="UnityEngine.Rendering.Blitter.BlitTexture(CommandBuffer, RTHandle, Vector4, float, bool)"/>
     /// </summary>
-    public void BlitTexture(CommandBuffer cmd, RenderTexture source, RenderTexture destination, ColorSpaceConversion conversion, ScaleBias scaleBias)
+    public void BlitTexture(CommandBuffer cmd, Texture source, RenderTexture destination, ColorSpaceConversion conversion, ScaleBias scaleBias)
     {
         m_PropertyBlock.SetTexture(ShaderIDs._BlitTexture, source);
         m_PropertyBlock.SetVector(ShaderIDs._BlitScaleBias, scaleBias.Vector);
@@ -114,7 +114,7 @@ class BlitExtended
     /// <summary>
     /// Similar to <see cref="UnityEngine.Rendering.Blitter.BlitQuad"/>
     /// </summary>
-    public void BlitQuad(CommandBuffer cmd, RenderTexture source, ColorSpaceConversion conversion, ScaleBias srcScaleBias, ScaleBias dstScaleBias)
+    public void BlitQuad(CommandBuffer cmd, Texture source, ColorSpaceConversion conversion, ScaleBias srcScaleBias, ScaleBias dstScaleBias)
     {
         m_PropertyBlock.SetTexture(ShaderIDs._BlitTexture, source);
         m_PropertyBlock.SetVector(ShaderIDs._BlitScaleBias, srcScaleBias.Vector);
