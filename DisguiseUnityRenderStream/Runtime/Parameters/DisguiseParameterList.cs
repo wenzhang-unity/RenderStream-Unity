@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 namespace Disguise.RenderStream.Parameters
@@ -43,7 +44,7 @@ namespace Disguise.RenderStream.Parameters
                 {
                     if (excludeDisabled && !parameter.Enabled)
                         continue;
-                    
+
                     parameters.Add((group, parameter));
                 }
             }
@@ -94,6 +95,11 @@ namespace Disguise.RenderStream.Parameters
 
         [SerializeField]
         int m_IDCounter = NumIDsForInternalUse;
+
+        [SerializeField]
+        Guid m_GUID = Guid.NewGuid();
+
+        public Guid GUID => m_GUID;
         
         public ParameterGroup DefaultGroup => m_Groups[0];
         

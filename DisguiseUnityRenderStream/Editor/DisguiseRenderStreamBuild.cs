@@ -194,6 +194,7 @@ namespace Disguise.RenderStream
                     {
                         foreach (var managedParameter in managedParameters)
                         {
+                            managedParameter.key = $"{managedParameter.key} {parameterList.GUID}";
                             sceneParameters.Add(managedParameter);
                         }
                     }
@@ -209,10 +210,17 @@ namespace Disguise.RenderStream
 
         static void AddPresenterToSchema(ManagedSchema schema)
         {
-            foreach (var scene in schema.scenes)
+            for (var i = 0; i < schema.scenes.Length; i++)
             {
+                var scene = schema.scenes[i];
+                
                 var presenterParameters = UnityDebugWindowPresenter.GetParametersOrderedForSchema(schema, scene);
-                scene.parameters = presenterParameters.Concat(scene.parameters).ToArray();
+                var presenterProcessedParameters = presenterParameters.Select(x =>
+                {
+                    x.key = $"{x.key} {i}";
+                    return x;
+                });
+                scene.parameters = presenterProcessedParameters.Concat(scene.parameters).ToArray();
             }
         }
         
