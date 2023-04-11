@@ -70,7 +70,14 @@ namespace Disguise.RenderStream.Parameters
                 .OrderBy(m => m.UIName)
                 .ToArray();
             
-            return fields.Concat(properties).ToArray();
+            var infos = fields.Concat(properties).ToList();
+
+            if (TryCreateThisMemberInfo(type, out var thisInfo))
+            {
+                infos.Insert(0, thisInfo);
+            }
+            
+            return infos.ToArray();
         }
         
         static Type GetSearchType(Type type)
@@ -137,6 +144,26 @@ namespace Disguise.RenderStream.Parameters
             return true;
         }
 
+        public static bool TryCreateThisMemberInfo(Type thisType, out MemberInfoForEditor memberInfoForEditor)
+        {
+            if (!TargetTypeIsSupported(thisType))
+            {
+                memberInfoForEditor = default;
+                return false;
+            }
+            
+            memberInfoForEditor = new MemberInfoForEditor
+            {
+                RealName = "this",
+                DisplayName = string.Empty,
+                GetterSetterType = GetGetterSetterType(thisType),
+                MemberInfo = null,
+                ValueType = thisType,
+                MemberType = MemberInfoForRuntime.MemberType.This
+            };
+            return true;
+        }
+
         static MemberInfoForEditor CreateMemberInfoFromField(FieldInfo field)
         {
             return new MemberInfoForEditor
@@ -145,7 +172,8 @@ namespace Disguise.RenderStream.Parameters
                 RealName = field.Name,
                 DisplayName = GetDisplayName(field),
                 ValueType = field.FieldType,
-                GetterSetterType = GetGetterSetterType(field.FieldType)
+                GetterSetterType = GetGetterSetterType(field.FieldType),
+                MemberType = MemberInfoForRuntime.MemberType.Field
             };
         }
         
@@ -157,7 +185,8 @@ namespace Disguise.RenderStream.Parameters
                 RealName = property.Name,
                 DisplayName = GetDisplayName(property),
                 ValueType = property.PropertyType,
-                GetterSetterType = GetGetterSetterType(property.PropertyType)
+                GetterSetterType = GetGetterSetterType(property.PropertyType),
+                MemberType = MemberInfoForRuntime.MemberType.Property
             };
         }
 

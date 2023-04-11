@@ -211,8 +211,9 @@ namespace Disguise.RenderStream.Parameters
                 if (GUI.Button(rect, propertyButtonContent, Contents.PropertyPopupStyle) && parameter.ReflectedObject != null)
                 {
                     var menu = new GenericMenu();
+                    var supportedMemberInfos = ReflectionHelper.GetSupportedMemberInfos(parameter.ReflectedObject.GetType());
 
-                    foreach (var memberInfo in ReflectionHelper.GetSupportedMemberInfos(parameter.ReflectedObject.GetType()))
+                    foreach (var memberInfo in supportedMemberInfos)
                     {
                         // Show the real name in parentheses when the display name is different
                         var propertyLabel = string.IsNullOrWhiteSpace(memberInfo.DisplayName)
@@ -227,6 +228,11 @@ namespace Disguise.RenderStream.Parameters
                                 parameter.MemberInfoForEditor = memberInfo;
                             }
                         });
+
+                        if (memberInfo.MemberType == MemberInfoForRuntime.MemberType.This && supportedMemberInfos.Length > 1)
+                        {
+                            menu.AddSeparator(string.Empty);
+                        }
                     }
 
                     menu.DropDown(rect);

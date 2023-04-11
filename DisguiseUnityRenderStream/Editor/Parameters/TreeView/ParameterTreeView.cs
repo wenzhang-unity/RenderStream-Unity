@@ -138,11 +138,7 @@ namespace Disguise.RenderStream.Parameters
             {
                 foreach (var parameter in group.m_Parameters)
                 {
-                    if (parameter.MemberInfo is { } memberInfo &&
-                        ReflectionHelper.TryCreateMemberInfo(memberInfo, out var memberInfoForEditor))
-                    {
-                        parameter.MemberInfoForEditor = memberInfoForEditor;
-                    }
+                    parameter.RefreshMemberInfoForEditor();
                 }
             }
         }

@@ -192,6 +192,12 @@ namespace Disguise.RenderStream.Parameters
 
         public MemberInfo MemberInfo => m_MemberInfoForRuntime.MemberInfo;
 
+        public void RefreshMemberInfoForEditor()
+        {
+            if (MemberInfoForEditor.CreateFromRuntimeInfo(m_MemberInfoForRuntime, out var editorInfo))
+                m_MemberInfoForEditor = editorInfo;
+        }
+
         static string NicifyMemberInfoName(MemberInfoForEditor memberInfo)
         {
             return string.IsNullOrWhiteSpace(memberInfo.DisplayName)
@@ -205,13 +211,13 @@ namespace Disguise.RenderStream.Parameters
             {
                 if (m_Component != null)
                 {
-                    Name = MemberInfoForEditor.IsValid()
+                    Name = (MemberInfoForEditor.IsValid() && MemberInfoForEditor.MemberType != MemberInfoForRuntime.MemberType.This)
                         ? $"{m_Object.name} {ObjectNames.NicifyVariableName(m_Component.GetType().Name)} {NicifyMemberInfoName(MemberInfoForEditor)}"
                         : $"{m_Object.name} {ObjectNames.NicifyVariableName(m_Component.GetType().Name)}";
                 }
                 else
                 {
-                    Name = MemberInfoForEditor.IsValid()
+                    Name = (MemberInfoForEditor.IsValid() && MemberInfoForEditor.MemberType != MemberInfoForRuntime.MemberType.This)
                         ? $"{m_Object.name} {NicifyMemberInfoName(MemberInfoForEditor)}"
                         : m_Object.name;
                 }
@@ -224,24 +230,26 @@ namespace Disguise.RenderStream.Parameters
 
         void ApplyMemberInfo(MemberInfoForEditor memberInfo)
         {
-            if (memberInfo.IsValid())
+            if (memberInfo.IsValid() && ReflectedObject != null)
             {
                 var remoteParameterWrapper = Activator.CreateInstance(memberInfo.GetterSetterType) as IRemoteParameterWrapper;
-            
-                m_MemberInfoForRuntime.Assign(ReflectedObject, memberInfo.MemberInfo);
+
+                m_MemberInfoForRuntime = memberInfo.ToRuntimeInfo(ReflectedObject);
                 m_MemberInfoForRuntime.Apply(remoteParameterWrapper);
                 m_RemoteParameterWrapper = remoteParameterWrapper;
             }
             else
             {
-                m_MemberInfoForRuntime.Assign(ReflectedObject, null);
+                m_MemberInfoForRuntime.Assign(null, null);
                 m_RemoteParameterWrapper = null;
             }
         }
 
         public bool TryGetParametersForSchema(ParameterGroup group, out IList<ManagedRemoteParameter> parametersForSchema)
         {
-            if (RemoteParameterWrapper is { } wrapper)
+            OnEnable();
+            
+            if (RemoteParameterWrapper is { IsValid: true } wrapper)
             {
                 var parameters = new List<ManagedRemoteParameter>();
                 

@@ -60,7 +60,8 @@ namespace Disguise.RenderStream.Parameters
 
             foreach (var (_, parameter) in parameters)
             {
-                wrappers.Add((parameter.RemoteParameterWrapper, parameter.ID));
+                if (parameter.RemoteParameterWrapper is { IsValid: true } validWrapper)
+                    wrappers.Add((validWrapper, parameter.ID));
             }
 
             return wrappers;

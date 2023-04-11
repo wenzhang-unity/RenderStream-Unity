@@ -96,9 +96,9 @@ namespace Disguise.RenderStream.Parameters
         /// <summary>
         /// Sets the target on which data from Disguise will be applied.
         /// </summary>
-        /// <param name="sourceObject">The target Unity object</param>
-        /// <param name="member">The target member of the Unity object</param>
-        void SetTarget(UnityEngine.Object sourceObject, MemberInfo member);
+        /// <param name="targetObject">The target Unity object</param>
+        /// <param name="member">The target member of the Unity object. When null, <paramref name="targetObject"/> is the direct target.</param>
+        void SetTarget(UnityEngine.Object targetObject, MemberInfo member);
         
         /// <summary>
         /// Applies data from Disguise onto the target.
@@ -139,9 +139,9 @@ namespace Disguise.RenderStream.Parameters
         public virtual bool IsValid => m_Object != null && m_MemberInfo != null;
 
         /// <inheritdoc/>
-        public virtual void SetTarget(UnityEngine.Object sourceObject, MemberInfo memberInfo)
+        public virtual void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
         {
-            m_Object = sourceObject;
+            m_Object = targetObject;
             m_MemberInfo = memberInfo;
             
 #if !ENABLE_IL2CPP
@@ -149,19 +149,14 @@ namespace Disguise.RenderStream.Parameters
 #endif
         }
 
-#if UNITY_EDITOR
         /// <summary>
         /// Returns the current value of the target object and member.
-        /// <remarks>
-        /// This is only intended to be used at build-time to set the default parameter values.
-        /// </remarks>
         /// </summary>
         public T GetValue()
         {
             var value = GetValueByReflection();
             return value;
         }
-#endif
 
         /// <summary>
         /// Applies data to the target object and member.
@@ -175,7 +170,6 @@ namespace Disguise.RenderStream.Parameters
 #endif
         }
         
-#if UNITY_EDITOR
         T GetValueByReflection()
         {
             return m_MemberInfo switch
@@ -185,7 +179,6 @@ namespace Disguise.RenderStream.Parameters
                 _ => throw new ArgumentOutOfRangeException(nameof(m_MemberInfo), $"Invalid member type {m_MemberInfo?.GetType().Name}.")
             };
         }
-#endif
 
         void SetValueByReflection(T value)
         {
@@ -201,6 +194,62 @@ namespace Disguise.RenderStream.Parameters
             {
                 throw new ArgumentOutOfRangeException(nameof(m_MemberInfo), $"Invalid member type {m_MemberInfo?.GetType().Name}.");
             }
+        }
+
+        /// <inheritdoc/>
+        public abstract void ApplyData(SceneCPUData data);
+        
+        /// <inheritdoc/>
+        public abstract void ApplyData(SceneGPUData data);
+        
+#if UNITY_EDITOR
+        /// <inheritdoc/>
+        public abstract IList<DisguiseRemoteParameter> GetParametersForSchema();
+#endif
+    }
+    
+    [Serializable]
+    abstract class ObjectRemoteParameterWrapper<T> : IRemoteParameterWrapper where T : UnityEngine.Object
+    {
+        class MemberAccessor : RemoteParameterWrapper<T>
+        {
+            public override void ApplyData(SceneCPUData data) { throw new NotImplementedException(); }
+            public override void ApplyData(SceneGPUData data) { throw new NotImplementedException(); }
+#if UNITY_EDITOR
+            public override IList<DisguiseRemoteParameter> GetParametersForSchema() { throw new NotImplementedException(); }
+#endif
+        }
+
+        MemberAccessor m_MemberAccessor = new MemberAccessor();
+
+        T m_ThisObject;
+
+        /// <inheritdoc/>
+        public virtual bool IsValid => m_ThisObject != null || m_MemberAccessor.IsValid;
+
+        /// <inheritdoc/>
+        public virtual void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
+        {
+            if (memberInfo == null)
+            {
+                m_ThisObject = targetObject as T;
+            }
+            else
+            {
+                m_ThisObject = null;
+                m_MemberAccessor.SetTarget(targetObject, memberInfo);
+            }
+        }
+
+        /// <summary>
+        /// Returns a reference to the target.
+        /// </summary>
+        public T GetValue()
+        {
+            if (m_ThisObject != null)
+                return m_ThisObject;
+            
+            return m_MemberAccessor.GetValue();
         }
 
         /// <inheritdoc/>

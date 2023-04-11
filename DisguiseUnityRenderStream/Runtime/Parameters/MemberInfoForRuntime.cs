@@ -14,7 +14,8 @@ namespace Disguise.RenderStream.Parameters
         {
             Invalid = 0,
             Field = 1,
-            Property = 2
+            Property = 2,
+            This = 4
         }
         
         [SerializeField]
@@ -29,19 +30,18 @@ namespace Disguise.RenderStream.Parameters
         MemberInfo m_CachedMemberInfo;
         bool m_SourceDirty;
 
+        public UnityEngine.Object Object => m_Object;
+        public MemberType Type => m_MemberType;
         public MemberInfo MemberInfo => GetMemberInfo();
 
+#if UNITY_EDITOR
         public void Assign(UnityEngine.Object obj, MemberInfo memberInfo)
         {
-            m_Object = obj;
+            Reset();
             
-            m_MemberType = MemberType.Invalid;
-            m_MemberValueType = string.Empty;
-            m_MemberName = string.Empty;
-            
-            if (memberInfo == null)
+            if (obj == null || memberInfo == null)
                 return;
-
+            
             if (memberInfo is FieldInfo field)
             {
                 m_MemberType = MemberType.Field;
@@ -62,12 +62,38 @@ namespace Disguise.RenderStream.Parameters
             {
                 throw new NotSupportedException($"Unsupported member type: {memberInfo.GetType().Name}");
             }
-
+            
+            m_Object = obj;
             m_MemberName = memberInfo.Name;
+            
             m_CachedMemberInfo = memberInfo;
             m_SourceDirty = false;
         }
+
+        public void Assign(UnityEngine.Object obj)
+        {
+            Reset();
+
+            if (obj == null)
+                return;
+
+            m_Object = obj;
+            m_MemberType = MemberType.This;
+            m_MemberValueType = obj.GetType().Name;
+        }
         
+        void Reset()
+        {
+            m_Object = null;
+            m_MemberType = MemberType.Invalid;
+            m_MemberValueType = string.Empty;
+            m_MemberName = string.Empty;
+
+            m_CachedMemberInfo = null;
+            m_SourceDirty = false;
+        }
+#endif
+
         MemberInfo GetMemberInfo()
         {
             if (!m_SourceDirty)
@@ -88,7 +114,7 @@ namespace Disguise.RenderStream.Parameters
                 {
                     MemberType.Field => type.GetField(m_MemberName),
                     MemberType.Property => type.GetProperty(m_MemberName),
-                    MemberType.Invalid => null,
+                    MemberType.Invalid or MemberType.This => null,
                     _ => throw new ArgumentOutOfRangeException(nameof(m_MemberType), $"Invalid member type {m_MemberType}."),
                 };
             }
@@ -108,7 +134,12 @@ namespace Disguise.RenderStream.Parameters
                 return;
             
             var memberInfo = GetMemberInfo();
-            remoteParameterWrapper.SetTarget(m_Object, memberInfo);
+
+            var obj = m_MemberType != MemberType.This && memberInfo == null
+                ? null
+                : m_Object;
+            
+            remoteParameterWrapper.SetTarget(obj, memberInfo);
         }
         
         /// <inheritdoc />

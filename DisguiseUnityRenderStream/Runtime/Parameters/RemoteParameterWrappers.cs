@@ -616,5 +616,40 @@ namespace Disguise.RenderStream.Parameters
 #endif
     }
     
-    // TODO: Add wrappers for: Transform, Texture
+    [RemoteParameterWrapper(typeof(Transform))]
+    class TransformRemoteParameterWrapper : ObjectRemoteParameterWrapper<Transform>
+    {
+        public override void ApplyData(SceneCPUData data)
+        {
+            var num = data.Numeric;
+            
+            var matrix = new Matrix4x4();
+            matrix.SetColumn(0, new Vector4(num[ 0], num[ 1], num[ 2], num[ 3]));
+            matrix.SetColumn(1, new Vector4(num[ 4], num[ 5], num[ 6], num[ 7]));
+            matrix.SetColumn(2, new Vector4(num[ 8], num[ 9], num[10], num[11]));
+            matrix.SetColumn(3, new Vector4(num[12], num[13], num[14], num[15]));
+
+            var transform = GetValue();
+            transform.localPosition = new Vector3(matrix[0, 3], matrix[1, 3], matrix[2, 3]);
+            transform.localScale = matrix.lossyScale;
+            transform.localRotation = matrix.rotation;
+        }
+
+        public override void ApplyData(SceneGPUData data)
+        {
+            
+        }
+        
+#if UNITY_EDITOR
+        public override IList<DisguiseRemoteParameter> GetParametersForSchema()
+        {
+            return new[]
+            {
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_TRANSFORM, 0f, 0f, 255f),
+            };
+        }
+#endif
+    }
+    
+    // TODO: Add wrapper for Texture
 }

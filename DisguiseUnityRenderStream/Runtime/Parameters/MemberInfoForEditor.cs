@@ -14,6 +14,7 @@ namespace Disguise.RenderStream.Parameters
         public string DisplayName;
         public Type ValueType;
         public Type GetterSetterType;
+        public MemberInfoForRuntime.MemberType MemberType;
 
         public string UIName => string.IsNullOrWhiteSpace(DisplayName)
             ? RealName
@@ -21,7 +22,37 @@ namespace Disguise.RenderStream.Parameters
 
         public bool IsValid()
         {
-            return !string.IsNullOrWhiteSpace(RealName) && MemberInfo != null;
+            return !string.IsNullOrWhiteSpace(RealName) &&
+                   (MemberInfo != null || MemberType == MemberInfoForRuntime.MemberType.This);
+        }
+
+        public MemberInfoForRuntime ToRuntimeInfo(UnityEngine.Object obj)
+        {
+            var runtimeInfo = new MemberInfoForRuntime();
+            
+            if (MemberType == MemberInfoForRuntime.MemberType.This)
+                runtimeInfo.Assign(obj);
+            else
+                runtimeInfo.Assign(obj, MemberInfo);
+            
+            return runtimeInfo;
+        }
+        
+        public static bool CreateFromRuntimeInfo(MemberInfoForRuntime runtimeInfo, out MemberInfoForEditor editorInfo)
+        {
+            if (runtimeInfo.Type == MemberInfoForRuntime.MemberType.This)
+            {
+                if (runtimeInfo.Object == null)
+                {
+                    editorInfo = default;
+                    return false;
+                }
+                
+                return ReflectionHelper.TryCreateThisMemberInfo(runtimeInfo.Object.GetType(), out editorInfo);
+            }
+            
+            var memberInfo = runtimeInfo.MemberInfo;
+            return ReflectionHelper.TryCreateMemberInfo(memberInfo, out editorInfo);
         }
         
         public override bool Equals(object obj) => obj is MemberInfoForEditor other && this.Equals(other);
@@ -41,7 +72,8 @@ namespace Disguise.RenderStream.Parameters
                    RealName == other.RealName &&
                    DisplayName == other.DisplayName &&
                    ValueType == other.ValueType &&
-                   GetterSetterType == other.GetterSetterType;
+                   GetterSetterType == other.GetterSetterType &&
+                   MemberType == other.MemberType;
         }
 
         bool Equals(MemberInfo lhs, MemberInfo rhs)
