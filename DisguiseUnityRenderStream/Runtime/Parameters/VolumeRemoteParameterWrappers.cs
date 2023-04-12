@@ -63,7 +63,7 @@ namespace Disguise.RenderStream.Parameters
         public const float FloatMax = float.MaxValue;
     }
     
-    // Our target is a VolumeParameter<T>, but what we really want to access is its VolumeParameter.value
+    // Our target is a VolumeParameter<T>, but what we really want to access is its VolumeParameter<T>.value
     class VolumeParameterDataGetterSetter<TData, TBackingData> : GetterSetter<TBackingData>
         where TData : VolumeParameter<TBackingData>
     {
