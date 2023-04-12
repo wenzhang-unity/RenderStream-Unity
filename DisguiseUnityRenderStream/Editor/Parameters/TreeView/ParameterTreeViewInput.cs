@@ -48,12 +48,14 @@ namespace Disguise.RenderStream.Parameters
                     if (firstItem is ParameterGroupTreeViewItem)
                     {
                         // Select all groups
-                        SetSelection(rootItem.children.Select(x => x.id).ToArray());
+                        RegisterSelectionUndoRedo();
+                        SelectRevealAndFrame(rootItem.children.Select(x => x.id).ToArray());
                     }
                     else if (firstItem is ParameterTreeViewItem)
                     {
                         // Select all parameters under the current group
-                        SetSelection(firstItem.parent.children.Select(x => x.id).ToArray());
+                        RegisterSelectionUndoRedo();
+                        SelectRevealAndFrame(firstItem.parent.children.Select(x => x.id).ToArray());
                     }
                     else
                     {
@@ -63,7 +65,8 @@ namespace Disguise.RenderStream.Parameters
                 else
                 {
                     // Select all groups
-                    SetSelection(rootItem.children.Select(x => x.id).ToArray());
+                    RegisterSelectionUndoRedo();
+                    SelectRevealAndFrame(rootItem.children.Select(x => x.id).ToArray());
                 }
                 
                 current.Use();

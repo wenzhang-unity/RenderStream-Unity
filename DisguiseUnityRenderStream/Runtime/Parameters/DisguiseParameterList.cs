@@ -87,11 +87,6 @@ namespace Disguise.RenderStream.Parameters
         
 #if UNITY_EDITOR
         public const int NumIDsForInternalUse = 100;
-        
-        public UnityEditor.IMGUI.Controls.TreeViewState TreeViewState => m_TreeViewState;
-        
-        [SerializeField]
-        UnityEditor.IMGUI.Controls.TreeViewState m_TreeViewState = new UnityEditor.IMGUI.Controls.TreeViewState();
 
         [SerializeField]
         int m_IDCounter = NumIDsForInternalUse;

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
@@ -7,25 +6,17 @@ namespace Disguise.RenderStream.Parameters
 {
     partial class ParameterTreeView
     {
-        /// <summary>
-        /// Selection events are not registered in the undo system when true.
-        /// </summary>
-        static bool s_SelectionReentryGuard;
-
-        /// <summary>
-        /// Selection events are not registered in the undo system inside this scope.
-        /// </summary>
-        class SelectionReEntryGuard : IDisposable
+        public interface ITreeViewStateStorage
         {
-            public SelectionReEntryGuard()
-            {
-                s_SelectionReentryGuard = true;
-            }
+            UnityEngine.Object GetStorageObject();
+        }
 
-            public void Dispose()
-            {
-                s_SelectionReentryGuard = false;
-            }
+        /// <summary>
+        /// Call just before changing the selection.
+        /// </summary>
+        void RegisterSelectionUndoRedo()
+        {
+            Undo.RegisterCompleteObjectUndo(m_StateStorage.GetStorageObject(), "Change parameter selection");
         }
 
         /// <summary>
@@ -48,7 +39,7 @@ namespace Disguise.RenderStream.Parameters
         /// </summary>
         protected override void SelectionChanged(IList<int> selectedIds)
         {
-            RegisterSelectionUndoRedo();
+            RegisterPostSelectionUndoRedo();
             
             base.SelectionChanged(selectedIds);
         }
@@ -56,21 +47,18 @@ namespace Disguise.RenderStream.Parameters
         /// <summary>
         /// Handles the details of registering the new selection.
         /// </summary>
-        void RegisterSelectionUndoRedo()
+        void RegisterPostSelectionUndoRedo()
         {
-            if (!s_SelectionReentryGuard)
-            {
-                // The undo system expects the state of the object before the change.
-                // We register the previous selection in the undo system before restoring the current selection.
-                
-                var currentSelection = m_ParameterList.TreeViewState.selectedIDs;
-                m_ParameterList.TreeViewState.selectedIDs = m_PreviousSelection;
-                
-                Undo.RegisterCompleteObjectUndo(m_ParameterList, "Change parameter selection");
-                
-                m_ParameterList.TreeViewState.selectedIDs = currentSelection;
-                m_PreviousSelection = currentSelection;
-            }
+            // The undo system expects the state of the object before the change.
+            // We register the previous selection in the undo system before restoring the current selection.
+            
+            var currentSelection = state.selectedIDs;
+            state.selectedIDs = m_PreviousSelection;
+            
+            Undo.RegisterCompleteObjectUndo(m_StateStorage.GetStorageObject(), "Change parameter selection");
+            
+            state.selectedIDs = currentSelection;
+            m_PreviousSelection = new List<int>(currentSelection);
         }
 
         /// <summary>
@@ -80,10 +68,7 @@ namespace Disguise.RenderStream.Parameters
         {
             Reload();
 
-            using (new SelectionReEntryGuard())
-            {
-                SetSelection(m_ParameterList.TreeViewState.selectedIDs);
-            }
+            SetSelection(state.selectedIDs);
         }
         
         /// <summary>

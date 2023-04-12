@@ -39,11 +39,13 @@ namespace Disguise.RenderStream.Parameters
         }
 
         readonly DisguiseParameterList m_ParameterList;
+        readonly ITreeViewStateStorage m_StateStorage;
 
-        public ParameterTreeView(DisguiseParameterList parameterList) :
-            base(parameterList.TreeViewState)
+        public ParameterTreeView(DisguiseParameterList parameterList, TreeViewState state, ITreeViewStateStorage stateStorage) :
+            base(state)
         {
             m_ParameterList = parameterList;
+            m_StateStorage = stateStorage;
             m_PreviousSelection = state.selectedIDs;
 
             InitializeReflectionInfo();
@@ -160,6 +162,7 @@ namespace Disguise.RenderStream.Parameters
 
         public void CreateNewGroup()
         {
+            RegisterSelectionUndoRedo();
             RegisterUndo(Contents.UndoCreateNewParameterGroup);
             
             var newGroup = new ParameterGroup
@@ -184,6 +187,7 @@ namespace Disguise.RenderStream.Parameters
         /// <param name="selectionOverride">Specifies an item to treat as the current selection instead of the current UI selection.</param>
         public void CreateNewParameter(TreeViewItem selectionOverride = null)
         {
+            RegisterSelectionUndoRedo();
             RegisterUndo(Contents.UndoCreateNewParameter);
             
             ParameterGroup targetGroup;
@@ -248,12 +252,13 @@ namespace Disguise.RenderStream.Parameters
             if (!HasSelection())
                 return;
             
+            RegisterSelectionUndoRedo();
             RegisterUndo(Contents.UndoDeleteParameter);
             
             foreach (var item in FindRows(GetSelection()))
                 DeleteItem(item);
             
-            SetSelection(Array.Empty<int>());
+            SelectRevealAndFrame(Array.Empty<int>());
             
             Reload();
         }
@@ -293,6 +298,7 @@ namespace Disguise.RenderStream.Parameters
             if (!HasSelection())
                 return;
 
+            RegisterSelectionUndoRedo();
             RegisterUndo(Contents.UndoDuplicateParameter);
 
             var selection = GetSelection();

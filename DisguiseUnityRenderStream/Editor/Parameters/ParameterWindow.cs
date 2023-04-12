@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEditor.Build;
+using UnityEditor.IMGUI.Controls;
 using UnityEditor.SceneManagement;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -8,8 +9,13 @@ using UnityEngine.UIElements;
 
 namespace Disguise.RenderStream.Parameters
 {
-    public class ParameterWindow : EditorWindow
+    public class ParameterWindow : EditorWindow, ParameterTreeView.ITreeViewStateStorage
     {
+        Object ParameterTreeView.ITreeViewStateStorage.GetStorageObject()
+        {
+            return this;
+        }
+        
         static class Contents
         {
             public static readonly GUIContent WindowTitle = L10n.TextContent("Remote Parameters");
@@ -35,6 +41,9 @@ namespace Disguise.RenderStream.Parameters
         
         [SerializeField]
         StyleSheet m_Style;
+
+        [SerializeField]
+        TreeViewState m_TreeViewState;
 
         DisguiseParameterList m_ParameterList;
         ParameterTreeView m_TreeView;
@@ -206,7 +215,7 @@ namespace Disguise.RenderStream.Parameters
 
                 m_ParameterList = lists[0];
                 if (m_TreeView == null)
-                    m_TreeView = new ParameterTreeView(m_ParameterList);
+                    m_TreeView = new ParameterTreeView(m_ParameterList, m_TreeViewState, this);
             }
             else
             {

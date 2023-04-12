@@ -187,8 +187,8 @@ namespace Disguise.RenderStream.Parameters
 
                 if (newSelection.Length > 0)
                 {
+                    RegisterSelectionUndoRedo();
                     Reload();
-                    
                     SelectRevealAndFrame(newSelection);
                 }
                 
