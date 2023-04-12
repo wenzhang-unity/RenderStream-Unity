@@ -43,8 +43,8 @@ namespace Disguise.RenderStream.Parameters
     /// <typeparam name="T">A single-component numeric type</typeparam>
     abstract class NumericRemoteParameterWrapper<T> : RemoteParameterWrapper<T>
     {
-        protected float Min;
-        protected float Max;
+        public float Min;
+        public float Max;
 
         public override void ApplyData(SceneGPUData data)
         {
@@ -170,6 +170,9 @@ namespace Disguise.RenderStream.Parameters
     [RemoteParameterWrapper(typeof(Vector2Int))]
     class Vector2IntRemoteParameterWrapper : RemoteParameterWrapper<Vector2Int>
     {
+        public float Min = MinMax.IntMin;
+        public float Max = MinMax.IntMax;
+        
         public override void ApplyData(SceneCPUData data)
         {
             var value = new Vector2Int(
@@ -191,8 +194,8 @@ namespace Disguise.RenderStream.Parameters
             
             return new[]
             {
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.x, MinMax.IntMin, MinMax.IntMax, null, Suffix.X),
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.y, MinMax.IntMin, MinMax.IntMax, null, Suffix.Y)
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.x, Min, Max, null, Suffix.X),
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.y, Min, Max, null, Suffix.Y)
             };
         }
 #endif
@@ -201,6 +204,9 @@ namespace Disguise.RenderStream.Parameters
     [RemoteParameterWrapper(typeof(Vector3Int))]
     class Vector3IntRemoteParameterWrapper : RemoteParameterWrapper<Vector3Int>
     {
+        public float Min = MinMax.IntMin;
+        public float Max = MinMax.IntMax;
+        
         public override void ApplyData(SceneCPUData data)
         {
             var value = new Vector3Int(
@@ -223,9 +229,9 @@ namespace Disguise.RenderStream.Parameters
             
             return new[]
             {
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.x, MinMax.IntMin, MinMax.IntMax, null, Suffix.X),
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.y, MinMax.IntMin, MinMax.IntMax, null, Suffix.Y),
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.z, MinMax.IntMin, MinMax.IntMax, null, Suffix.Z)
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.x, Min, Max, null, Suffix.X),
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.y, Min, Max, null, Suffix.Y),
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.z, Min, Max, null, Suffix.Z)
             };
         }
 #endif
@@ -234,6 +240,9 @@ namespace Disguise.RenderStream.Parameters
     [RemoteParameterWrapper(typeof(Vector2))]
     class Vector2RemoteParameterWrapper : RemoteParameterWrapper<Vector2>
     {
+        public float Min = MinMax.FloatMin;
+        public float Max = MinMax.FloatMax;
+        
         public override void ApplyData(SceneCPUData data)
         {
             var value = new Vector2(
@@ -255,8 +264,8 @@ namespace Disguise.RenderStream.Parameters
             
             return new[]
             {
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.x, MinMax.FloatMin, MinMax.FloatMax, null, Suffix.X),
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.y, MinMax.FloatMin, MinMax.FloatMax, null, Suffix.Y)
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.x, Min, Max, null, Suffix.X),
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.y, Min, Max, null, Suffix.Y)
             };
         }
 #endif
@@ -265,6 +274,9 @@ namespace Disguise.RenderStream.Parameters
     [RemoteParameterWrapper(typeof(Vector3))]
     class Vector3RemoteParameterWrapper : RemoteParameterWrapper<Vector3>
     {
+        public float Min = MinMax.FloatMin;
+        public float Max = MinMax.FloatMax;
+        
         public override void ApplyData(SceneCPUData data)
         {
             var value = new Vector3(
@@ -287,9 +299,9 @@ namespace Disguise.RenderStream.Parameters
             
             return new[]
             {
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.x, MinMax.FloatMin, MinMax.FloatMax, null, Suffix.X),
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.y, MinMax.FloatMin, MinMax.FloatMax, null, Suffix.Y),
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.z, MinMax.FloatMin, MinMax.FloatMax, null, Suffix.Z)
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.x, Min, Max, null, Suffix.X),
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.y, Min, Max, null, Suffix.Y),
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.z, Min, Max, null, Suffix.Z)
             };
         }
 #endif
@@ -298,6 +310,9 @@ namespace Disguise.RenderStream.Parameters
     [RemoteParameterWrapper(typeof(Vector4))]
     class Vector4RemoteParameterWrapper : RemoteParameterWrapper<Vector4>
     {
+        public float Min = MinMax.FloatMin;
+        public float Max = MinMax.FloatMax;
+        
         public override void ApplyData(SceneCPUData data)
         {
             var value = new Vector4(
@@ -321,10 +336,10 @@ namespace Disguise.RenderStream.Parameters
             
             return new[]
             {
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.x, MinMax.FloatMin, MinMax.FloatMax, null, Suffix.X),
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.y, MinMax.FloatMin, MinMax.FloatMax, null, Suffix.Y),
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.z, MinMax.FloatMin, MinMax.FloatMax, null, Suffix.Z),
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.w, MinMax.FloatMin, MinMax.FloatMax, null, Suffix.W)
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.x, Min, Max, null, Suffix.X),
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.y, Min, Max, null, Suffix.Y),
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.z, Min, Max, null, Suffix.Z),
+                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.w, Min, Max, null, Suffix.W)
             };
         }
 #endif
@@ -612,7 +627,9 @@ namespace Disguise.RenderStream.Parameters
         {
             base.SetTarget(sourceObject, memberInfo);
 
-            if (ReflectionHelper.ResolveFieldOrPropertyType(memberInfo) is { IsEnum: true } enumType)
+            var enumType = GetEnumType(memberInfo);
+
+            if (enumType.IsEnum)
             {
                 m_EnumType = enumType;
                 m_EnumValues = s_EnumValuesCache.GetValues(m_EnumType);
@@ -621,7 +638,14 @@ namespace Disguise.RenderStream.Parameters
             {
                 m_EnumType = null;
                 m_EnumValues = Array.Empty<object>();
+                
+                throw new NotSupportedException($"Type {enumType.Name} is not an enum");
             }
+        }
+
+        protected virtual Type GetEnumType(MemberInfo memberInfo)
+        {
+            return ReflectionHelper.ResolveFieldOrPropertyType(memberInfo);
         }
         
         public override void ApplyData(SceneCPUData data)
@@ -681,6 +705,7 @@ namespace Disguise.RenderStream.Parameters
     }
     
     [RemoteParameterWrapper(typeof(Texture))]
+    [RemoteParameterWrapper(typeof(Texture2D))]
     class TextureRemoteParameterWrapper : RemoteParameterWrapper<Texture>
     {
         RenderTexture m_Data;

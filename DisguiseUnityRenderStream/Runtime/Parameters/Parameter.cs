@@ -130,11 +130,11 @@ namespace Disguise.RenderStream.Parameters
                         }
                     }
                     
-                    if (resetMemberInfo)
-                        MemberInfoForEditor = default;
-                    
                     m_Object = value;
                     m_Component = newComponent;
+                    
+                    if (!RefreshExtendedInfoIfNeeded() && resetMemberInfo)
+                        MemberInfoForEditor = default;
                     
                     ApplyMemberInfo(MemberInfoForEditor);
 
@@ -153,15 +153,17 @@ namespace Disguise.RenderStream.Parameters
             {
                 if (value != m_Component)
                 {
+                    var oldComponent = m_Component;
+                    m_Component = value;
+                    m_Object = m_Component.gameObject;
+                    
                     // A new Component of a different type?
-                    if (value != null && m_Component != null &&
-                        value.GetType() != m_Component.GetType())
+                    if (!RefreshExtendedInfoIfNeeded() &&
+                        m_Component != null && oldComponent != null &&
+                        m_Component.GetType() != oldComponent.GetType())
                     {
                         MemberInfoForEditor = default;
                     }
-                    
-                    m_Component = value;
-                    m_Object = m_Component.gameObject;
                     
                     ApplyMemberInfo(MemberInfoForEditor);
 
@@ -192,17 +194,61 @@ namespace Disguise.RenderStream.Parameters
 
         public MemberInfo MemberInfo => m_MemberInfoForRuntime.MemberInfo;
 
+        bool RefreshExtendedInfoIfNeeded()
+        {
+            if (ReflectedObject == null || m_MemberInfoForRuntime.Object == null)
+                return false;
+            
+            // This parameter was discovered by MemberInfoCollector, we need to recover its group information
+            // and validate that its target object hasn't changed externally.
+            if (ReflectedObject != m_MemberInfoForRuntime.Object)
+            {
+                var (_, extendedInfo) = ReflectionHelper.GetSupportedMemberInfos(ReflectedObject);
+                foreach (var info in extendedInfo)
+                {
+                    if (info.Object == m_MemberInfoForRuntime.Object &&
+                        info.MemberType == m_MemberInfoForRuntime.Type &&
+                        MemberInfoForEditor.Equals(info.MemberInfo, m_MemberInfoForRuntime.MemberInfo))
+                    {
+                        m_MemberInfoForEditor = info;
+                        return true;
+                    }
+                    
+                    // We haven't found an exact match, but try auto-assign to an object of the same type
+                    if (info.Object.GetType() == m_MemberInfoForRuntime.Object.GetType() &&
+                        info.MemberType == m_MemberInfoForRuntime.Type &&
+                        MemberInfoForEditor.Equals(info.MemberInfo, m_MemberInfoForRuntime.MemberInfo))
+                    {
+                        m_MemberInfoForEditor = info;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
         public void RefreshMemberInfoForEditor()
         {
-            if (MemberInfoForEditor.CreateFromRuntimeInfo(m_MemberInfoForRuntime, out var editorInfo))
-                m_MemberInfoForEditor = editorInfo;
+            if (!RefreshExtendedInfoIfNeeded())
+            {
+                if (MemberInfoForEditor.CreateFromRuntimeInfo(m_MemberInfoForRuntime, out var editorInfo))
+                {
+                    m_MemberInfoForEditor = editorInfo;
+                }
+            }
         }
 
         static string NicifyMemberInfoName(MemberInfoForEditor memberInfo)
         {
-            return string.IsNullOrWhiteSpace(memberInfo.DisplayName)
+            var name = string.IsNullOrWhiteSpace(memberInfo.DisplayName)
                 ? ObjectNames.NicifyVariableName(memberInfo.RealName)
                 : memberInfo.DisplayName;
+
+            if (!string.IsNullOrWhiteSpace(memberInfo.GroupPrefix))
+                name = $"{memberInfo.GroupPrefix}/{name}";
+
+            return name;
         }
         
         public void AutoAssignName()
@@ -234,7 +280,7 @@ namespace Disguise.RenderStream.Parameters
             {
                 var remoteParameterWrapper = Activator.CreateInstance(memberInfo.GetterSetterType) as IRemoteParameterWrapper;
 
-                m_MemberInfoForRuntime = memberInfo.ToRuntimeInfo(ReflectedObject);
+                m_MemberInfoForRuntime = memberInfo.ToRuntimeInfo();
                 m_MemberInfoForRuntime.Apply(remoteParameterWrapper);
                 m_RemoteParameterWrapper = remoteParameterWrapper;
             }

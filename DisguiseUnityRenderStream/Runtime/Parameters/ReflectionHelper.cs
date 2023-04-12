@@ -25,16 +25,51 @@ namespace Disguise.RenderStream.Parameters
         }
         
 #if UNITY_EDITOR
+        [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
+        public class MemberInfoCollectorAttribute : Attribute
+        {
+            public Type Type { get; }
+
+            public int Priority { get; set; } = 0;
+
+            public MemberInfoCollectorAttribute(Type type)
+            {
+                Type = type;
+            }
+        }
+        
+        public abstract class MemberInfoCollector
+        {
+            public abstract IEnumerable<MemberInfoForEditor> GetSupportedMemberInfos(UnityEngine.Object obj);
+        }
+        
         /// <summary>
         /// A filtered mapping of every <see cref="RemoteParameterWrapperAttribute.Type"/> to its <see cref="IRemoteParameterWrapper"/> implementation.
         /// </summary>
-        static readonly Dictionary<Type, Type> s_TypeToRemoteParameterWrapper = TypeCache.GetTypesWithAttribute<RemoteParameterWrapperAttribute>()
+        private static readonly Dictionary<Type, Type> s_TypeToRemoteParameterWrapper = TypeCache.GetTypesWithAttribute<RemoteParameterWrapperAttribute>()
             .Where(t => typeof(IRemoteParameterWrapper).IsAssignableFrom(t))
-            .Select(type => (type, type.GetCustomAttribute(typeof(RemoteParameterWrapperAttribute)) as RemoteParameterWrapperAttribute))
+            .SelectMany(type =>
+            {
+                return type.GetCustomAttributes(typeof(RemoteParameterWrapperAttribute))
+                    .Select(attribute => (type, attribute as RemoteParameterWrapperAttribute));
+            })
             .Where(tuple => tuple.Item2 != null)
             .GroupBy(tuple => tuple.Item2.Type)
             .ToDictionary(t => t.Key, t => t.OrderByDescending(tuple => tuple.Item2.Priority).First().type);
 
+        private static readonly Dictionary<Type, MemberInfoCollector> s_TypeToCollector = TypeCache.GetTypesWithAttribute<MemberInfoCollectorAttribute>()
+            .Where(t => typeof(MemberInfoCollector).IsAssignableFrom(t))
+            .SelectMany(type =>
+            {
+                var instance = Activator.CreateInstance(type) as MemberInfoCollector;
+                
+                return type.GetCustomAttributes(typeof(MemberInfoCollectorAttribute))
+                    .Select(attribute => (instance, type, attribute as MemberInfoCollectorAttribute));
+            })
+            .Where(tuple => tuple.Item3 != null)
+            .GroupBy(tuple => tuple.Item3.Type)
+            .ToDictionary(t => t.Key, t => t.OrderByDescending(tuple => tuple.Item3.Priority).First().instance);
+        
         /// <summary>
         /// Returns a user-friendly name of an enum value. Uses an associated <see cref="DisplayNameAttribute"/> directly
         /// or <see cref="ObjectNames.NicifyVariableName"/> of the real name when absent.
@@ -51,33 +86,43 @@ namespace Disguise.RenderStream.Parameters
         /// <summary>
         /// Returns all the members available to be used as remote parameter targets for the provided Unity object type.
         /// </summary>
-        public static MemberInfoForEditor[] GetSupportedMemberInfos(Type type)
+        public static (IList<MemberInfoForEditor> mainInfo, IList<MemberInfoForEditor> extendedInfo) GetSupportedMemberInfos(UnityEngine.Object obj)
         {
             // Includes public instance/static fields and properties.
             // Inherited members are included.
             // Only properties with public getters and setters are collected (the getter is used for the default parameter value).
             // Only members that have a type with a corresponding RemoteParameterWrapperAttribute are collected.
+
+            var type = obj.GetType();
             
             var fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
                 .Where(m => TargetTypeIsSupported(m.FieldType))
-                .Select(CreateMemberInfoFromField)
+                .Select(m => CreateMemberInfoFromField(obj, m))
                 .OrderBy(m => m.UIName)
-                .ToArray();
+                .ToList();
             
             var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
                 .Where(m => TargetTypeIsSupported(m.PropertyType) && m.GetGetMethod() != null && m.GetSetMethod() != null)
-                .Select(CreateMemberInfoFromProperty)
+                .Select(m => CreateMemberInfoFromProperty(obj, m))
                 .OrderBy(m => m.UIName)
-                .ToArray();
+                .ToList();
             
-            var infos = fields.Concat(properties).ToList();
+            var mainInfos = fields.Concat(properties).ToList();
+            var extendedInfos = new List<MemberInfoForEditor>();
 
-            if (TryCreateThisMemberInfo(type, out var thisInfo))
+            if (s_TypeToCollector.TryGetValue(type, out var collector))
             {
-                infos.Insert(0, thisInfo);
+                var extended = collector.GetSupportedMemberInfos(obj);
+                extended = extended.OrderBy(m => m.GroupPrefix).ThenBy(m => m.UIName);
+                extendedInfos.AddRange(extended);
+            }
+
+            if (TryCreateThisMemberInfo(obj, out var thisInfo))
+            {
+                mainInfos.Insert(0, thisInfo);
             }
             
-            return infos.ToArray();
+            return (mainInfos, extendedInfos);
         }
         
         static Type GetSearchType(Type type)
@@ -88,6 +133,22 @@ namespace Disguise.RenderStream.Parameters
             // Funnel the unregistered enum type into our generic Enum handler
             if (type.IsEnum)
                 return typeof(Enum);
+            
+            // Funnel an unregistered enum generic into a user handler
+            var curType = type;
+            while (curType != null) // Walk up the inheritance chain
+            {
+                if (curType.IsGenericType)
+                {
+                    var args = curType.GenericTypeArguments;
+                    if (args.Length > 0 && args[0].IsEnum)
+                    {
+                        return curType.GetGenericTypeDefinition().MakeGenericType(typeof(Enum));
+                    }
+                }
+
+                curType = curType.BaseType;
+            }
 
             return type;
         }
@@ -107,7 +168,7 @@ namespace Disguise.RenderStream.Parameters
         /// <summary>
         /// Creates a <see cref="MemberInfoForEditor"/> which contains cached data from the provided <see cref="MemberInfo"/>.
         /// </summary>
-        public static bool TryCreateMemberInfo(MemberInfo memberInfo, out MemberInfoForEditor memberInfoForEditor)
+        public static bool TryCreateMemberInfo(UnityEngine.Object obj, MemberInfo memberInfo, out MemberInfoForEditor memberInfoForEditor)
         {
             if (memberInfo == null)
             {
@@ -123,7 +184,7 @@ namespace Disguise.RenderStream.Parameters
                     return false;
                 }
                 
-                memberInfoForEditor = CreateMemberInfoFromField(field);
+                memberInfoForEditor = CreateMemberInfoFromField(obj, field);
             }
             else if (memberInfo is PropertyInfo property)
             {
@@ -133,7 +194,7 @@ namespace Disguise.RenderStream.Parameters
                     return false;
                 }
                 
-                memberInfoForEditor = CreateMemberInfoFromProperty(property);
+                memberInfoForEditor = CreateMemberInfoFromProperty(obj, property);
             }
             else
             {
@@ -144,8 +205,10 @@ namespace Disguise.RenderStream.Parameters
             return true;
         }
 
-        public static bool TryCreateThisMemberInfo(Type thisType, out MemberInfoForEditor memberInfoForEditor)
+        public static bool TryCreateThisMemberInfo(UnityEngine.Object obj, out MemberInfoForEditor memberInfoForEditor)
         {
+            var thisType = obj.GetType();
+            
             if (!TargetTypeIsSupported(thisType))
             {
                 memberInfoForEditor = default;
@@ -154,6 +217,7 @@ namespace Disguise.RenderStream.Parameters
             
             memberInfoForEditor = new MemberInfoForEditor
             {
+                Object = obj,
                 RealName = "this",
                 DisplayName = string.Empty,
                 GetterSetterType = GetGetterSetterType(thisType),
@@ -164,10 +228,11 @@ namespace Disguise.RenderStream.Parameters
             return true;
         }
 
-        static MemberInfoForEditor CreateMemberInfoFromField(FieldInfo field)
+        static MemberInfoForEditor CreateMemberInfoFromField(UnityEngine.Object obj, FieldInfo field)
         {
             return new MemberInfoForEditor
             {
+                Object = obj,
                 MemberInfo = field,
                 RealName = field.Name,
                 DisplayName = GetDisplayName(field),
@@ -177,10 +242,11 @@ namespace Disguise.RenderStream.Parameters
             };
         }
         
-        static MemberInfoForEditor CreateMemberInfoFromProperty(PropertyInfo property)
+        static MemberInfoForEditor CreateMemberInfoFromProperty(UnityEngine.Object obj, PropertyInfo property)
         {
             return new MemberInfoForEditor
             {
+                Object = obj,
                 MemberInfo = property,
                 RealName = property.Name,
                 DisplayName = GetDisplayName(property),

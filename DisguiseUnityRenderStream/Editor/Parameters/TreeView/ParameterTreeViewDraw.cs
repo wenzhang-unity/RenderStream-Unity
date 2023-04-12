@@ -200,7 +200,7 @@ namespace Disguise.RenderStream.Parameters
                 // Show the property name or a warning icon if invalid
                 if (parameter.MemberInfoForEditor.IsValid())
                 {
-                    propertyButtonContent.text = parameter.MemberInfoForEditor.UIName;
+                    propertyButtonContent.text = parameter.MemberInfoForEditor.UINameWithGroupPrefix;
                 }
                 else
                 {
@@ -210,15 +210,15 @@ namespace Disguise.RenderStream.Parameters
 
                 if (GUI.Button(rect, propertyButtonContent, Contents.PropertyPopupStyle) && parameter.ReflectedObject != null)
                 {
-                    var menu = new GenericMenu();
-                    var supportedMemberInfos = ReflectionHelper.GetSupportedMemberInfos(parameter.ReflectedObject.GetType());
-
-                    foreach (var memberInfo in supportedMemberInfos)
+                    void AddPropertyItem(GenericMenu menu, MemberInfoForEditor memberInfo)
                     {
                         // Show the real name in parentheses when the display name is different
                         var propertyLabel = string.IsNullOrWhiteSpace(memberInfo.DisplayName)
                             ? $"{memberInfo.ValueType.Name} {memberInfo.RealName}"
                             : $"{memberInfo.ValueType.Name} {memberInfo.DisplayName} ({memberInfo.RealName})";
+
+                        if (!string.IsNullOrWhiteSpace(memberInfo.GroupPrefix))
+                            propertyLabel = $"{memberInfo.GroupPrefix}/{propertyLabel}";
 
                         menu.AddItem(new GUIContent(propertyLabel), memberInfo == parameter.MemberInfoForEditor, () =>
                         {
@@ -228,11 +228,29 @@ namespace Disguise.RenderStream.Parameters
                                 parameter.MemberInfoForEditor = memberInfo;
                             }
                         });
+                    }
+                    
+                    var menu = new GenericMenu();
+                    var (mainInfo, extendedInfo) = ReflectionHelper.GetSupportedMemberInfos(parameter.ReflectedObject);
 
-                        if (memberInfo.MemberType == MemberInfoForRuntime.MemberType.This && supportedMemberInfos.Length > 1)
+                    foreach (var memberInfo in mainInfo)
+                    {
+                        AddPropertyItem(menu, memberInfo);
+
+                        if (memberInfo.MemberType == MemberInfoForRuntime.MemberType.This && mainInfo.Count > 1)
                         {
                             menu.AddSeparator(string.Empty);
                         }
+                    }
+
+                    if (extendedInfo.Count > 0)
+                    {
+                        menu.AddSeparator(string.Empty);
+                    }
+                    
+                    foreach (var memberInfo in extendedInfo)
+                    {
+                        AddPropertyItem(menu, memberInfo);
                     }
 
                     menu.DropDown(rect);

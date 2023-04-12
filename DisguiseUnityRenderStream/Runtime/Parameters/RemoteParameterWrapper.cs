@@ -10,38 +10,38 @@ namespace Disguise.RenderStream.Parameters
     /// <summary>
     /// Data to be assembled into a <see cref="ManagedRemoteParameter"/> instance at build-time.
     /// </summary>
-    readonly struct DisguiseRemoteParameter
+    struct DisguiseRemoteParameter
     {
         /// <summary>
         /// Directly mapped to <see cref="ManagedRemoteParameter.type"/>.
         /// </summary>
-        public readonly RemoteParameterType Type;
+        public RemoteParameterType Type;
         
         /// <summary>
         /// Directly mapped to <see cref="ManagedRemoteParameter.defaultValue"/>.
         /// This can be a <see langword="float"/> or a <see langword="string"/>.
         /// </summary>
-        public readonly object DefaultValue;
+        public object DefaultValue;
         
         /// <summary>
         /// Mapped to <see cref="ManagedRemoteParameter.min"/> but it can be later overriden by the user.
         /// </summary>
-        public readonly float DefaultMin;
+        public float DefaultMin;
         
         /// <summary>
         /// Mapped to <see cref="ManagedRemoteParameter.max"/> but it can be later overriden by the user.
         /// </summary>
-        public readonly float DefaultMax;
+        public float DefaultMax;
         
         /// <summary>
         /// Directly mapped to <see cref="ManagedRemoteParameter.options"/>.
         /// </summary>
-        public readonly string[] Options;
+        public string[] Options;
         
         /// <summary>
         /// Will be appended to <see cref="ManagedRemoteParameter.displayName"/> and <see cref="ManagedRemoteParameter.key"/>.
         /// </summary>
-        public readonly string Suffix;
+        public string Suffix;
             
         public DisguiseRemoteParameter(RemoteParameterType type, object defaultValue, float defaultMin, float defaultMax, string[] options = null, string suffix = null)
         {
@@ -121,25 +121,26 @@ namespace Disguise.RenderStream.Parameters
 #endif
     }
     
-    /// <summary>
-    /// An implementation of <see cref="IRemoteParameterWrapper"/> that provides optimized access to a reflected member.
-    /// </summary>
-    /// <typeparam name="T">The C# type of the remote parameter.</typeparam>
-    [Serializable]
-    abstract class RemoteParameterWrapper<T> : IRemoteParameterWrapper
+    abstract class GetterSetter<T>
     {
+        public abstract bool IsValid { get; }
+        public abstract void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo);
+        public abstract T Get();
+        public abstract void Set(T value);
+    }
+    
+    class DefaultGetterSetter<T> : GetterSetter<T>
+    {
+        public override bool IsValid => m_Object != null && m_MemberInfo != null;
+        
         UnityEngine.Object m_Object;
         MemberInfo m_MemberInfo;
         
 #if !ENABLE_IL2CPP
         Action<UnityEngine.Object, T> m_DynamicSetter;
 #endif
-
-        /// <inheritdoc/>
-        public virtual bool IsValid => m_Object != null && m_MemberInfo != null;
-
-        /// <inheritdoc/>
-        public virtual void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
+        
+        public override void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
         {
             m_Object = targetObject;
             m_MemberInfo = memberInfo;
@@ -150,19 +151,13 @@ namespace Disguise.RenderStream.Parameters
 #endif
         }
 
-        /// <summary>
-        /// Returns the current value of the target object and member.
-        /// </summary>
-        public T GetValue()
+        public override T Get()
         {
             var value = GetValueByReflection();
             return value;
         }
 
-        /// <summary>
-        /// Applies data to the target object and member.
-        /// </summary>
-        public void SetValue(T value)
+        public override void Set(T value)
         {
 #if ENABLE_IL2CPP
             SetValueByReflection(value);
@@ -196,6 +191,71 @@ namespace Disguise.RenderStream.Parameters
                 throw new ArgumentOutOfRangeException(nameof(m_MemberInfo), $"Invalid member type {m_MemberInfo?.GetType().Name}.");
             }
         }
+    }
+    
+    class ThisGetterSetter<T> : GetterSetter<T> where T : UnityEngine.Object
+    {
+        public override bool IsValid => m_Object != null && m_MemberInfo == null;
+        
+        UnityEngine.Object m_Object;
+        MemberInfo m_MemberInfo;
+        
+        public override void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
+        {
+            m_Object = targetObject;
+            m_MemberInfo = memberInfo;
+        }
+
+        public override T Get()
+        {
+            return (T)m_Object;
+        }
+
+        public override void Set(T value)
+        {
+            throw new InvalidOperationException("Cannot set the value on a 'this' object");
+        }
+    }
+    
+    /// <summary>
+    /// An implementation of <see cref="IRemoteParameterWrapper"/> that provides optimized access to a reflected member.
+    /// </summary>
+    /// <typeparam name="T">The C# type of the remote parameter.</typeparam>
+    [Serializable]
+    abstract class RemoteParameterWrapper<T> : IRemoteParameterWrapper
+    {
+        GetterSetter<T> m_GetterSetter = new DefaultGetterSetter<T>();
+
+        public GetterSetter<T> GetterSetter
+        {
+            get => m_GetterSetter;
+            set => m_GetterSetter = value;
+        }
+
+        /// <inheritdoc/>
+        public virtual bool IsValid => m_GetterSetter.IsValid;
+
+        /// <inheritdoc/>
+        public virtual void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
+        {
+            m_GetterSetter.SetTarget(targetObject, memberInfo);
+        }
+
+        /// <summary>
+        /// Returns the current value of the target object and member.
+        /// </summary>
+        public T GetValue()
+        {
+            return m_GetterSetter.Get();
+        }
+
+        /// <summary>
+        /// Applies data to the target object and member.
+        /// </summary>
+        public void SetValue(T value)
+        {
+            m_GetterSetter.Set(value);
+        }
 
         /// <inheritdoc/>
         public abstract void ApplyData(SceneCPUData data);
@@ -210,69 +270,24 @@ namespace Disguise.RenderStream.Parameters
     }
     
     [Serializable]
-    abstract class ObjectRemoteParameterWrapper<T> : IRemoteParameterWrapper where T : UnityEngine.Object
+    abstract class ObjectRemoteParameterWrapper<T> : RemoteParameterWrapper<T> where T : UnityEngine.Object
     {
-        class MemberAccessor : RemoteParameterWrapper<T>
-        {
-            public override void ApplyData(SceneCPUData data) { throw new NotImplementedException(); }
-            public override void ApplyData(SceneGPUData data) { throw new NotImplementedException(); }
-#if UNITY_EDITOR
-            public override IList<DisguiseRemoteParameter> GetParametersForSchema() { throw new NotImplementedException(); }
-#endif
-        }
-
-        MemberAccessor m_MemberAccessor = new MemberAccessor();
-
-        T m_ThisObject;
+        DefaultGetterSetter<T> m_GetterSetter = new DefaultGetterSetter<T>();
+        ThisGetterSetter<T> m_ThisGetterSetter = new ThisGetterSetter<T>();
 
         /// <inheritdoc/>
-        public virtual bool IsValid => m_ThisObject != null || m_MemberAccessor.IsValid;
-
-        /// <inheritdoc/>
-        public virtual void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
+        public override void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
         {
             if (memberInfo == null)
             {
-                m_ThisObject = targetObject as T;
+                GetterSetter = m_ThisGetterSetter;
             }
             else
             {
-                m_ThisObject = null;
-                m_MemberAccessor.SetTarget(targetObject, memberInfo);
+                GetterSetter = m_GetterSetter;
             }
-        }
-
-        /// <summary>
-        /// Returns a reference to the target.
-        /// </summary>
-        public T GetValue()
-        {
-            if (m_ThisObject != null)
-                return m_ThisObject;
             
-            return m_MemberAccessor.GetValue();
+            base.SetTarget(targetObject, memberInfo);
         }
-        
-        /// <summary>
-        /// Applies data to the target object and member.
-        /// </summary>
-        public void SetValue(T value)
-        {
-            if (m_ThisObject != null)
-                throw new InvalidOperationException("Cannot set the value on a 'this' object");
-            
-            m_MemberAccessor.SetValue(value);
-        }
-
-        /// <inheritdoc/>
-        public abstract void ApplyData(SceneCPUData data);
-        
-        /// <inheritdoc/>
-        public abstract void ApplyData(SceneGPUData data);
-        
-#if UNITY_EDITOR
-        /// <inheritdoc/>
-        public abstract IList<DisguiseRemoteParameter> GetParametersForSchema();
-#endif
     }
 }
