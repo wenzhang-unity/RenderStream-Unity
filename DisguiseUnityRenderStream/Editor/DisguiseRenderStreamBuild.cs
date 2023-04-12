@@ -10,10 +10,45 @@ using UnityEditor.UnityLinker;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
-using Object = UnityEngine.Object;
 
 namespace Disguise.RenderStream
 {
+    struct BuildInfo
+    {
+        public BuildTarget Target;
+        public string DestinationFolderPath;
+
+        public BuildInfo(BuildReport report)
+        {
+            Target = report.summary.platform;
+            DestinationFolderPath = report.summary.outputPath;
+        }
+
+        static public BuildInfo CreateFromBuildSettings()
+        {
+            var target = EditorUserBuildSettings.activeBuildTarget;
+            
+            return new BuildInfo
+            {
+                Target = target,
+                DestinationFolderPath = EditorUserBuildSettings.GetBuildLocation(target)
+            };
+        }
+
+        public void Validate()
+        {
+            if (Target != BuildTarget.StandaloneWindows64)
+            {
+                throw new BuildFailedException("DisguiseRenderStream: RenderStream is only available for 64-bit Windows (x86_64).");
+            }
+            
+            if (PluginEntry.instance.IsAvailable == false)
+            {
+                throw new BuildFailedException("DisguiseRenderStream: RenderStream DLL not available, could not save schema");
+            }
+        }
+    }
+    
     /// <summary>
     /// Build callback order:
     /// 1. IPreprocessBuildWithReport
@@ -31,6 +66,14 @@ namespace Disguise.RenderStream
         bool m_HasGeneratedSchema;
         ManagedSchema m_Schema;
         int m_NumScenesInBuild;
+
+        public void PatchSchema()
+        {
+            var buildInfo = BuildInfo.CreateFromBuildSettings();
+            buildInfo.Validate();
+            
+            GenerateSchema(buildInfo, ProcessSceneForSchema);
+        }
         
         void IPreprocessBuildWithReport.OnPreprocessBuild(BuildReport report)
         {
@@ -44,25 +87,17 @@ namespace Disguise.RenderStream
             
             AddAlwaysIncludedShader(BlitExtended.ShaderName);
             AddAlwaysIncludedShader(DepthCopy.ShaderName);
-            
-            var target = report.summary.platform;
-            
-            if (target != BuildTarget.StandaloneWindows64)
-            {
-                throw new BuildFailedException("DisguiseRenderStream: RenderStream is only available for 64-bit Windows (x86_64).");
-            }
 
-            if (PluginEntry.instance.IsAvailable == false)
-            {
-                throw new BuildFailedException("DisguiseRenderStream: RenderStream DLL not available, could not save schema");
-            }
+            var buildInfo = new BuildInfo(report);
+            buildInfo.Validate();
         }
         
         string IUnityLinkerProcessor.GenerateAdditionalLinkXmlFile(BuildReport report, UnityLinkerBuildPipelineData data)
         {
             var preserver = new ReflectedMemberPreserver();
+            var buildInfo = new BuildInfo(report);
             
-            GenerateSchema(report, scene =>
+            GenerateSchema(buildInfo, scene =>
             {
                 if (DisguiseParameterList.FindInstance() is { } parameterList)
                 {
@@ -92,11 +127,12 @@ namespace Disguise.RenderStream
             
             if (m_HasGeneratedSchema)
                 return;
-            
-            GenerateSchema(report, ProcessSceneForSchema);
+
+            var buildInfo = new BuildInfo(report);
+            GenerateSchema(buildInfo, ProcessSceneForSchema);
         }
 
-        void GenerateSchema(BuildReport report, Action<Scene> processScene)
+        void GenerateSchema(BuildInfo buildInfo, Action<Scene> processScene)
         {
             var settings = DisguiseRenderStreamSettings.GetOrCreateSettings();
             m_Schema = new ManagedSchema
@@ -148,8 +184,7 @@ namespace Disguise.RenderStream
                 AddPresenterToSchema(m_Schema);
             }
 
-            var pathToBuiltProject = report.summary.outputPath;
-            RS_ERROR error = PluginEntry.instance.saveSchema(pathToBuiltProject, ref m_Schema);
+            RS_ERROR error = PluginEntry.instance.saveSchema(buildInfo.DestinationFolderPath, ref m_Schema);
             if (error != RS_ERROR.RS_ERROR_SUCCESS)
             {
                 throw new BuildFailedException(string.Format("DisguiseRenderStream: Failed to save schema {0}", error));

@@ -3,7 +3,7 @@
         <uie:ToolbarMenu name="create-button" tabindex="-1" display-tooltip-when-elided="true" />
         <uie:ToolbarSearchField name="tree-view-search-field" focusable="true" />
         <ui:Label name="scene-name-label"/>
-        <uie:ToolbarButton name="patch-schema-button" text="Patch Schema" />
+        <uie:ToolbarButton name="patch-schema-button" text="Patch Schema" tooltip="Generate the Disguise schema without running a full build to preview it in the Disguise software. Note: The existing build will no longer function until it is rebuilt. Note: This feature is incompatible with IL2CPP or code stripping and is disabled when they are enabled." />
         <uie:ToolbarButton name="disguise-settings-button"/>
     </uie:Toolbar>
     

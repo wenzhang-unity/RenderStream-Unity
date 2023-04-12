@@ -177,8 +177,8 @@ namespace Disguise.RenderStream.Parameters
         /// </summary>
         void OnPatchSchemaButtonClicked()
         {
-            // TODO implement
-            Debug.Log("TODO implement");
+            var build = new DisguiseRenderStreamBuild();
+            build.PatchSchema();
         }
 
         void OnDisguiseSettingsButtonClicked()
