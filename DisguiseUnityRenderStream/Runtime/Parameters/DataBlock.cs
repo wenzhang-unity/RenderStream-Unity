@@ -369,7 +369,7 @@ namespace Disguise.RenderStream.Parameters
 
         protected override bool NeedsSignalChange(T prevValue, T newValue)
         {
-            return prevValue.Equals(newValue);
+            return !prevValue.Equals(newValue);
         }
     }
     
@@ -385,7 +385,7 @@ namespace Disguise.RenderStream.Parameters
             if (prevValue == null)
                 return newValue != null;
             
-            return prevValue.Equals(newValue);
+            return !prevValue.Equals(newValue);
         }
     }
     
