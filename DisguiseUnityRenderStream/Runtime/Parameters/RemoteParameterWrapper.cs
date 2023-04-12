@@ -42,6 +42,17 @@ namespace Disguise.RenderStream.Parameters
         /// Will be appended to <see cref="ManagedRemoteParameter.displayName"/> and <see cref="ManagedRemoteParameter.key"/>.
         /// </summary>
         public string Suffix;
+
+        /// <summary>
+        /// A hint for type RemoteParameterType.RS_PARAMETER_NUMBER when this parameter only contains whole numbers.
+        /// </summary>
+        public bool IntegralTypeHint;
+
+        public static DisguiseRemoteParameter SetIntegralType(DisguiseRemoteParameter parameter)
+        {
+            parameter.IntegralTypeHint = true;
+            return parameter;
+        }
             
         public DisguiseRemoteParameter(RemoteParameterType type, object defaultValue, float defaultMin, float defaultMax, string[] options = null, string suffix = null)
         {
@@ -51,6 +62,7 @@ namespace Disguise.RenderStream.Parameters
             DefaultMax = defaultMax;
             Options = options;
             Suffix = suffix;
+            IntegralTypeHint = false;
         }
     }
 #endif

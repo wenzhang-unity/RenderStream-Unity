@@ -332,11 +332,23 @@ namespace Disguise.RenderStream.Parameters
                 type = parameterDesc.Type,
                 min = parameterDesc.DefaultMin,
                 max = parameterDesc.DefaultMax,
-                step = 1f, // TODO handle step
                 defaultValue = parameterDesc.DefaultValue,
                 options = options,
                 dmxOffset = -1,
                 dmxType = RemoteParameterDmxType.RS_DMX_16_BE
+            };
+
+            // Could have UI in the future
+            parameter.step = (parameter, parameterDesc.IntegralTypeHint) switch
+            {
+                { parameter: { type: RemoteParameterType.RS_PARAMETER_IMAGE } } => 1f,
+                { parameter: { type: RemoteParameterType.RS_PARAMETER_POSE } } => 1f,
+                { parameter: { type: RemoteParameterType.RS_PARAMETER_TRANSFORM } } => 1f,
+                { parameter: { type: RemoteParameterType.RS_PARAMETER_TEXT } } => 0f,
+                { parameter: { options: { Length: > 0 } } } => 1f,
+                { parameter: { type: RemoteParameterType.RS_PARAMETER_NUMBER }, IntegralTypeHint: true} => 1f,
+                { parameter: { type: RemoteParameterType.RS_PARAMETER_NUMBER }, IntegralTypeHint: false} => 0.001f,
+                _ => throw new NotSupportedException($"Can't determine a step value for parameter {displayName} in group {group}")
             };
             
             return parameter;

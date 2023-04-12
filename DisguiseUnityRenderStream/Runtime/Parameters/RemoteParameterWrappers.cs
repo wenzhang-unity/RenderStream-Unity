@@ -54,10 +54,10 @@ namespace Disguise.RenderStream.Parameters
 #if UNITY_EDITOR
         public override IList<DisguiseRemoteParameter> GetParametersForSchema()
         {
-            return new[]
-            {
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, GetValue(), Min, Max)
-            };
+            var parameter = new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, GetValue(), Min, Max);
+            parameter.IntegralTypeHint = typeof(T) != typeof(float);
+
+            return new[]{ parameter };
         }
 #endif
     }
@@ -194,8 +194,8 @@ namespace Disguise.RenderStream.Parameters
             
             return new[]
             {
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.x, Min, Max, null, Suffix.X),
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.y, Min, Max, null, Suffix.Y)
+                DisguiseRemoteParameter.SetIntegralType(new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.x, Min, Max, null, Suffix.X)),
+                DisguiseRemoteParameter.SetIntegralType(new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.y, Min, Max, null, Suffix.Y))
             };
         }
 #endif
@@ -229,9 +229,9 @@ namespace Disguise.RenderStream.Parameters
             
             return new[]
             {
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.x, Min, Max, null, Suffix.X),
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.y, Min, Max, null, Suffix.Y),
-                new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.z, Min, Max, null, Suffix.Z)
+                DisguiseRemoteParameter.SetIntegralType(new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.x, Min, Max, null, Suffix.X)),
+                DisguiseRemoteParameter.SetIntegralType(new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.y, Min, Max, null, Suffix.Y)),
+                DisguiseRemoteParameter.SetIntegralType(new DisguiseRemoteParameter(RemoteParameterType.RS_PARAMETER_NUMBER, value.z, Min, Max, null, Suffix.Z))
             };
         }
 #endif
