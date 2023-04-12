@@ -1,5 +1,4 @@
 using UnityEditor;
-using UnityEditor.Build;
 using UnityEditor.IMGUI.Controls;
 using UnityEditor.SceneManagement;
 using UnityEditor.UIElements;
@@ -241,7 +240,7 @@ namespace Disguise.RenderStream.Parameters
                 m_SceneNameLabel.text = string.Empty;
             }
             
-            m_PatchSchemaButton.SetEnabled(PlayerSettings.GetManagedStrippingLevel(NamedBuildTarget.Standalone) == ManagedStrippingLevel.Disabled);
+            m_PatchSchemaButton.SetDisplay(DisguiseRenderStreamSettings.GetOrCreateSettings().showPatchSchemaButton);
         }
 
         void OnSceneLoaded(Scene oldScene, Scene newScene)
