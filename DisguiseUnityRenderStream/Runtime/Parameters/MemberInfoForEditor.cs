@@ -9,8 +9,7 @@ namespace Disguise.RenderStream.Parameters
     /// </summary>
     struct MemberInfoForEditor
     {
-        public UnityEngine.Object Object;
-        public MemberInfo MemberInfo;
+        public Target Target;
         public string RealName;
         public string DisplayName;
         public string GroupPrefix;
@@ -28,38 +27,33 @@ namespace Disguise.RenderStream.Parameters
 
         public bool IsValid()
         {
-            return Object != null &&
+            return Target.Object != null &&
                    !string.IsNullOrWhiteSpace(RealName) &&
-                   (MemberInfo != null || MemberType == MemberInfoForRuntime.MemberType.This);
+                   (Target.MemberInfo != null || MemberType == MemberInfoForRuntime.MemberType.This);
         }
 
         public MemberInfoForRuntime ToRuntimeInfo()
         {
             var runtimeInfo = new MemberInfoForRuntime();
-            
-            if (MemberType == MemberInfoForRuntime.MemberType.This)
-                runtimeInfo.Assign(Object);
-            else
-                runtimeInfo.Assign(Object, MemberInfo);
-            
+            runtimeInfo.Assign(Target);
             return runtimeInfo;
         }
         
-        public static bool CreateFromRuntimeInfo(MemberInfoForRuntime runtimeInfo, out MemberInfoForEditor editorInfo)
+        public static bool TryCreateFromRuntimeInfo(MemberInfoForRuntime runtimeInfo, out MemberInfoForEditor editorInfo)
         {
             if (runtimeInfo.Type == MemberInfoForRuntime.MemberType.This)
             {
-                if (runtimeInfo.Object == null)
+                var obj = runtimeInfo.Target.Object;
+                if (obj == null)
                 {
                     editorInfo = default;
                     return false;
                 }
                 
-                return ReflectionHelper.TryCreateThisMemberInfo(runtimeInfo.Object, out editorInfo);
+                return ReflectionHelper.TryCreateThisMemberInfo(obj, out editorInfo);
             }
             
-            var memberInfo = runtimeInfo.MemberInfo;
-            return ReflectionHelper.TryCreateMemberInfo(runtimeInfo.Object, memberInfo, out editorInfo);
+            return ReflectionHelper.TryCreateMemberInfo(runtimeInfo.Target.Object, runtimeInfo.Target.MemberInfo, out editorInfo);
         }
         
         public override bool Equals(object obj) => obj is MemberInfoForEditor other && this.Equals(other);
@@ -75,26 +69,13 @@ namespace Disguise.RenderStream.Parameters
 
         public bool Equals(MemberInfoForEditor other)
         {
-            return Equals(MemberInfo, other.MemberInfo) &&
-                   Object == other.Object &&
+            return Target == other.Target &&
                    RealName == other.RealName &&
                    DisplayName == other.DisplayName &&
                    GroupPrefix == other.GroupPrefix &&
                    ValueType == other.ValueType &&
                    GetterSetterType == other.GetterSetterType &&
                    MemberType == other.MemberType;
-        }
-
-        public static bool Equals(MemberInfo lhs, MemberInfo rhs)
-        {
-            if (lhs == null && rhs == null)
-                return true;
-
-            if (lhs == null || rhs == null)
-                return false;
-
-            return lhs.Name == rhs.Name &&
-                   lhs.DeclaringType == rhs.DeclaringType;
         }
     }
 }

@@ -4,6 +4,45 @@ using UnityEngine;
 
 namespace Disguise.RenderStream.Parameters
 {
+    struct Target
+    {
+        public bool IsValid => Object != null;
+        
+        public bool IsThisMode => MemberInfo == null;
+        
+        public UnityEngine.Object Object;
+        public MemberInfo MemberInfo;
+        
+        public override bool Equals(object obj) => obj is Target other && Equals(other);
+
+        public static bool operator ==(Target lhs, Target rhs) => lhs.Equals(rhs);
+
+        public static bool operator !=(Target lhs, Target rhs) => !(lhs == rhs);
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+
+        public bool Equals(Target other)
+        {
+            return Object == other.Object &&
+                   Equals(MemberInfo, other.MemberInfo);
+        }
+
+        public static bool Equals(MemberInfo lhs, MemberInfo rhs)
+        {
+            if (lhs == null && rhs == null)
+                return true;
+
+            if (lhs == null || rhs == null)
+                return false;
+
+            return lhs.Name == rhs.Name &&
+                   lhs.DeclaringType == rhs.DeclaringType;
+        }
+    }
+    
     /// <summary>
     /// Represents serialized and cached <see cref="MemberInfo"/> data in the runtime context.
     /// </summary>
@@ -19,74 +58,107 @@ namespace Disguise.RenderStream.Parameters
         }
         
         [SerializeField]
-        UnityEngine.Object m_Object = null;
-        [SerializeField]
         MemberType m_MemberType = MemberType.Invalid;
         [SerializeField]
-        string m_MemberValueType = null;
+        UnityEngine.Object m_Object;
         [SerializeField]
-        string m_MemberName = null;
+        string m_MemberName;
 
         MemberInfo m_CachedMemberInfo;
         bool m_SourceDirty;
 
-        public UnityEngine.Object Object => m_Object;
         public MemberType Type => m_MemberType;
-        public MemberInfo MemberInfo => GetMemberInfo();
 
-#if UNITY_EDITOR
-        public void Assign(UnityEngine.Object obj, MemberInfo memberInfo)
+        public Target Target
         {
-            Reset();
-            
-            if (obj == null || memberInfo == null)
-                return;
-            
-            if (memberInfo is FieldInfo field)
+            get
             {
-                m_MemberType = MemberType.Field;
-                m_MemberValueType = field.FieldType.Name;
-            }
-            else if (memberInfo is PropertyInfo property)
-            {
-                if (property.GetGetMethod() == null)
-                    throw new NotSupportedException($"Property {memberInfo.Name} has no getter");
-                
-                if (property.GetSetMethod() == null)
-                    throw new NotSupportedException($"Property {memberInfo.Name} has no setter");
-                
-                m_MemberType = MemberType.Property;
-                m_MemberValueType = property.PropertyType.Name;
-            }
-            else
-            {
-                throw new NotSupportedException($"Unsupported member type: {memberInfo.GetType().Name}");
-            }
+                if (!m_SourceDirty)
+                {
+                    return new Target
+                    {
+                        Object = m_Object,
+                        MemberInfo = m_CachedMemberInfo
+                    };
+                }
             
-            m_Object = obj;
-            m_MemberName = memberInfo.Name;
-            
-            m_CachedMemberInfo = memberInfo;
-            m_SourceDirty = false;
+                if (m_Object == null)
+                {
+                    return default;
+                }
+
+                var type = m_Object.GetType();
+
+                try
+                {
+                    m_CachedMemberInfo = m_MemberType switch
+                    {
+                        MemberType.Field => type.GetField(m_MemberName),
+                        MemberType.Property => type.GetProperty(m_MemberName),
+                        MemberType.Invalid or MemberType.This => null,
+                        _ => throw new ArgumentOutOfRangeException(nameof(m_MemberType), $"Invalid member type {m_MemberType}."),
+                    };
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning(e);
+                    return default;
+                }
+
+                m_SourceDirty = false;
+                return new Target
+                {
+                    Object = m_Object,
+                    MemberInfo = m_CachedMemberInfo
+                };
+            }
         }
 
-        public void Assign(UnityEngine.Object obj)
+#if UNITY_EDITOR
+        public void Assign(Target target)
         {
             Reset();
 
-            if (obj == null)
+            if (!target.IsValid)
                 return;
 
-            m_Object = obj;
-            m_MemberType = MemberType.This;
-            m_MemberValueType = obj.GetType().Name;
+            if (target.IsThisMode)
+            {
+                m_MemberType = MemberType.This;
+                m_Object = target.Object;
+            }
+            else if (target.MemberInfo != null)
+            {
+                switch (target.MemberInfo)
+                {
+                    case FieldInfo field:
+                        m_MemberType = MemberType.Field;
+                        break;
+                    
+                    case PropertyInfo property:
+                        if (property.GetGetMethod() == null)
+                            throw new NotSupportedException($"Property {target.MemberInfo.Name} has no getter");
+                        if (property.GetSetMethod() == null)
+                            throw new NotSupportedException($"Property {target.MemberInfo.Name} has no setter");
+                        m_MemberType = MemberType.Property;
+                        break;
+                    
+                    default:
+                        throw new NotSupportedException($"Unsupported member type: {target.MemberInfo.GetType().Name}");
+                }
+                
+                m_Object = target.Object;
+                m_MemberName = target.MemberInfo.Name;
+                m_CachedMemberInfo = target.MemberInfo;
+            }
+            
+            m_SourceDirty = false;
         }
         
         void Reset()
         {
-            m_Object = null;
             m_MemberType = MemberType.Invalid;
-            m_MemberValueType = string.Empty;
+            m_Object = null;
             m_MemberName = string.Empty;
 
             m_CachedMemberInfo = null;
@@ -94,52 +166,9 @@ namespace Disguise.RenderStream.Parameters
         }
 #endif
 
-        MemberInfo GetMemberInfo()
-        {
-            if (!m_SourceDirty)
-            {
-                return m_CachedMemberInfo;
-            }
-            
-            if (m_Object == null)
-            {
-                return null;
-            }
-
-            var type = m_Object.GetType();
-
-            try
-            {
-                m_CachedMemberInfo = m_MemberType switch
-                {
-                    MemberType.Field => type.GetField(m_MemberName),
-                    MemberType.Property => type.GetProperty(m_MemberName),
-                    MemberType.Invalid or MemberType.This => null,
-                    _ => throw new ArgumentOutOfRangeException(nameof(m_MemberType), $"Invalid member type {m_MemberType}."),
-                };
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning(e);
-                return null;
-            }
-
-            m_SourceDirty = false;
-            return m_CachedMemberInfo;
-        }
-
         public void Apply(IRemoteParameterWrapper remoteParameterWrapper)
         {
-            if (remoteParameterWrapper == null)
-                return;
-            
-            var memberInfo = GetMemberInfo();
-
-            var obj = m_MemberType != MemberType.This && memberInfo == null
-                ? null
-                : m_Object;
-            
-            remoteParameterWrapper.SetTarget(obj, memberInfo);
+            remoteParameterWrapper?.SetTarget(Target);
         }
         
         /// <inheritdoc />

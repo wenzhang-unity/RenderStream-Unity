@@ -120,10 +120,18 @@ namespace Disguise.RenderStream
         public List<(IRemoteParameterWrapper parameter, int parameterID)> GetRemoteParameterWrappers()
         {
             var selected = new IntRemoteParameterWrapper();
-            selected.SetTarget(this, typeof(UnityDebugWindowPresenter).GetProperty(nameof(Selected)));
+            selected.SetTarget(new Target
+            {
+                Object = this,
+                MemberInfo = typeof(UnityDebugWindowPresenter).GetProperty(nameof(Selected))
+            });
             
             var resizeStrategy = new EnumRemoteParameterWrapper();
-            resizeStrategy.SetTarget(this, typeof(UnityDebugWindowPresenter).GetProperty(nameof(ResizeStrategy)));
+            resizeStrategy.SetTarget(new Target
+            {
+                Object = this,
+                MemberInfo = typeof(UnityDebugWindowPresenter).GetProperty(nameof(ResizeStrategy))
+            });
 
             return new List<(IRemoteParameterWrapper parameter, int parameterID)>
             {
@@ -168,7 +176,11 @@ namespace Disguise.RenderStream
             options.AddRange(liveTextureNames);
             
             var selected = new IntRemoteParameterWrapper();
-            selected.SetTarget(mockInstance, mockInstance.GetType().GetField(nameof(MockUnityDebugWindowPresenter.Selected)));
+            selected.SetTarget(new Target
+            {
+                Object = mockInstance,
+                MemberInfo = mockInstance.GetType().GetField(nameof(MockUnityDebugWindowPresenter.Selected))
+            });
             var selectedDesc = selected.GetParametersForSchema()[0];
             var selectedSchema = Parameter.CreateManagedRemoteParameter(
                 selectedDesc,
@@ -179,7 +191,11 @@ namespace Disguise.RenderStream
             selectedSchema.options = options.ToArray();
 
             var resizeStrategy = new EnumRemoteParameterWrapper();
-            resizeStrategy.SetTarget(mockInstance, mockInstance.GetType().GetField(nameof(MockUnityDebugWindowPresenter.ResizeStrategy)));
+            resizeStrategy.SetTarget(new Target
+            {
+                Object = mockInstance,
+                MemberInfo = mockInstance.GetType().GetField(nameof(MockUnityDebugWindowPresenter.ResizeStrategy))
+            });
             var resizeStrategyDesc = resizeStrategy.GetParametersForSchema()[0];
             var resizeStrategySchema = Parameter.CreateManagedRemoteParameter(
                 resizeStrategyDesc,

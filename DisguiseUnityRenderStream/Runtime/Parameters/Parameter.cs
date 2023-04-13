@@ -192,32 +192,31 @@ namespace Disguise.RenderStream.Parameters
             }
         }
 
-        public MemberInfo MemberInfo => m_MemberInfoForRuntime.MemberInfo;
+        public MemberInfo MemberInfo => m_MemberInfoForRuntime.Target.MemberInfo;
 
         bool RefreshExtendedInfoIfNeeded()
         {
-            if (ReflectedObject == null || m_MemberInfoForRuntime.Object == null)
+            if (ReflectedObject == null || m_MemberInfoForRuntime.Target.Object == null)
                 return false;
             
             // This parameter was discovered by MemberInfoCollector, we need to recover its group information
             // and validate that its target object hasn't changed externally.
-            if (ReflectedObject != m_MemberInfoForRuntime.Object)
+            if (ReflectedObject != m_MemberInfoForRuntime.Target.Object)
             {
                 var (_, extendedInfo) = ReflectionHelper.GetSupportedMemberInfos(ReflectedObject);
                 foreach (var info in extendedInfo)
                 {
-                    if (info.Object == m_MemberInfoForRuntime.Object &&
-                        info.MemberType == m_MemberInfoForRuntime.Type &&
-                        MemberInfoForEditor.Equals(info.MemberInfo, m_MemberInfoForRuntime.MemberInfo))
+                    if (info.Target == m_MemberInfoForRuntime.Target &&
+                        info.MemberType == m_MemberInfoForRuntime.Type)
                     {
                         m_MemberInfoForEditor = info;
                         return true;
                     }
                     
                     // We haven't found an exact match, but try auto-assign to an object of the same type
-                    if (info.Object.GetType() == m_MemberInfoForRuntime.Object.GetType() &&
+                    if (info.Target.Object.GetType() == m_MemberInfoForRuntime.Target.Object.GetType() &&
                         info.MemberType == m_MemberInfoForRuntime.Type &&
-                        MemberInfoForEditor.Equals(info.MemberInfo, m_MemberInfoForRuntime.MemberInfo))
+                        Target.Equals(info.Target.MemberInfo, m_MemberInfoForRuntime.Target.MemberInfo))
                     {
                         m_MemberInfoForEditor = info;
                         return true;
@@ -232,7 +231,7 @@ namespace Disguise.RenderStream.Parameters
         {
             if (!RefreshExtendedInfoIfNeeded())
             {
-                if (MemberInfoForEditor.CreateFromRuntimeInfo(m_MemberInfoForRuntime, out var editorInfo))
+                if (MemberInfoForEditor.TryCreateFromRuntimeInfo(m_MemberInfoForRuntime, out var editorInfo))
                 {
                     m_MemberInfoForEditor = editorInfo;
                 }
@@ -286,7 +285,7 @@ namespace Disguise.RenderStream.Parameters
             }
             else
             {
-                m_MemberInfoForRuntime.Assign(null, null);
+                m_MemberInfoForRuntime.Assign(default);
                 m_RemoteParameterWrapper = null;
             }
         }

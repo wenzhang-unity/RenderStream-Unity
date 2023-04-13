@@ -42,11 +42,17 @@ namespace Disguise.RenderStream.Parameters
         {
             public abstract IEnumerable<MemberInfoForEditor> GetSupportedMemberInfos(UnityEngine.Object obj);
         }
+
+        struct WrapperDescriptor
+        {
+            public Type Type;
+            public RemoteParameterWrapperAttribute Attribute;
+        }
         
         /// <summary>
         /// A filtered mapping of every <see cref="RemoteParameterWrapperAttribute.Type"/> to its <see cref="IRemoteParameterWrapper"/> implementation.
         /// </summary>
-        private static readonly Dictionary<Type, Type> s_TypeToRemoteParameterWrapper = TypeCache.GetTypesWithAttribute<RemoteParameterWrapperAttribute>()
+        private static readonly Dictionary<Type, WrapperDescriptor> s_TypeToRemoteParameterWrapper = TypeCache.GetTypesWithAttribute<RemoteParameterWrapperAttribute>()
             .Where(t => typeof(IRemoteParameterWrapper).IsAssignableFrom(t))
             .SelectMany(type =>
             {
@@ -55,7 +61,15 @@ namespace Disguise.RenderStream.Parameters
             })
             .Where(tuple => tuple.Item2 != null)
             .GroupBy(tuple => tuple.Item2.Type)
-            .ToDictionary(t => t.Key, t => t.OrderByDescending(tuple => tuple.Item2.Priority).First().type);
+            .ToDictionary(t => t.Key, t =>
+            {
+                var topPriority = t.OrderByDescending(tuple => tuple.Item2.Priority).First();
+                return new WrapperDescriptor
+                {
+                    Type = topPriority.type,
+                    Attribute = topPriority.Item2
+                };
+            });
 
         private static readonly Dictionary<Type, MemberInfoCollector> s_TypeToCollector = TypeCache.GetTypesWithAttribute<MemberInfoCollectorAttribute>()
             .Where(t => typeof(MemberInfoCollector).IsAssignableFrom(t))
@@ -162,7 +176,7 @@ namespace Disguise.RenderStream.Parameters
         static Type GetGetterSetterType(Type type)
         {
             var searchType = GetSearchType(type);
-            return s_TypeToRemoteParameterWrapper[searchType];
+            return s_TypeToRemoteParameterWrapper[searchType].Type;
         }
 
         /// <summary>
@@ -215,13 +229,23 @@ namespace Disguise.RenderStream.Parameters
                 return false;
             }
             
+            if (s_TypeToRemoteParameterWrapper.TryGetValue(thisType, out var wrapperDescriptor) &&
+                !wrapperDescriptor.Attribute.SupportsThisMode)
+            {
+                memberInfoForEditor = default;
+                return false;
+            }
+            
             memberInfoForEditor = new MemberInfoForEditor
             {
-                Object = obj,
+                Target = new Target
+                {
+                    Object = obj,
+                    MemberInfo = null
+                },
                 RealName = "this",
                 DisplayName = string.Empty,
                 GetterSetterType = GetGetterSetterType(thisType),
-                MemberInfo = null,
                 ValueType = thisType,
                 MemberType = MemberInfoForRuntime.MemberType.This
             };
@@ -232,8 +256,11 @@ namespace Disguise.RenderStream.Parameters
         {
             return new MemberInfoForEditor
             {
-                Object = obj,
-                MemberInfo = field,
+                Target = new Target
+                {
+                    Object = obj,
+                    MemberInfo = field
+                },
                 RealName = field.Name,
                 DisplayName = GetDisplayName(field),
                 ValueType = field.FieldType,
@@ -246,8 +273,11 @@ namespace Disguise.RenderStream.Parameters
         {
             return new MemberInfoForEditor
             {
-                Object = obj,
-                MemberInfo = property,
+                Target = new Target
+                {
+                    Object = obj,
+                    MemberInfo = property
+                },
                 RealName = property.Name,
                 DisplayName = GetDisplayName(property),
                 ValueType = property.PropertyType,

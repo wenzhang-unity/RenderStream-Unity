@@ -623,11 +623,11 @@ namespace Disguise.RenderStream.Parameters
 
         public override bool IsValid => base.IsValid && m_EnumType != null && m_EnumValues.Length > 0;
 
-        public override void SetTarget(UnityEngine.Object sourceObject, MemberInfo memberInfo)
+        public override void SetTarget(Target target)
         {
-            base.SetTarget(sourceObject, memberInfo);
+            base.SetTarget(target);
 
-            var enumType = GetEnumType(memberInfo);
+            var enumType = GetEnumType(target.MemberInfo);
 
             if (enumType.IsEnum)
             {
@@ -675,7 +675,7 @@ namespace Disguise.RenderStream.Parameters
 #endif
     }
     
-    [RemoteParameterWrapper(typeof(Transform))]
+    [RemoteParameterWrapper(typeof(Transform), true)]
     class TransformRemoteParameterWrapper : ObjectRemoteParameterWrapper<Transform>
     {
         public override void ApplyData(SceneCPUData data)
@@ -742,7 +742,7 @@ namespace Disguise.RenderStream.Parameters
 #endif
     }
     
-    [RemoteParameterWrapper(typeof(RenderTexture))]
+    [RemoteParameterWrapper(typeof(RenderTexture), true)]
     class RenderTextureRemoteParameterWrapper : ObjectRemoteParameterWrapper<RenderTexture>
     {
         RenderTexture m_Data;

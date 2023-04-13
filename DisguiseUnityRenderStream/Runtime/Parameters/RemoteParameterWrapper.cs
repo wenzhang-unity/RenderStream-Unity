@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Disguise.RenderStream.Utils;
-using UnityEngine;
 
 namespace Disguise.RenderStream.Parameters
 {
@@ -78,6 +77,8 @@ namespace Disguise.RenderStream.Parameters
         /// The type of the remote parameter.
         /// </summary>
         public Type Type { get; }
+        
+        public bool SupportsThisMode { get; }
 
         /// <summary>
         /// If multiple argument outputs are used for the same <see cref="Type"/>, the argument output with the greater priority is used.
@@ -87,9 +88,10 @@ namespace Disguise.RenderStream.Parameters
         /// </remarks>
         public int Priority { get; set; } = 0;
 
-        public RemoteParameterWrapperAttribute(Type type)
+        public RemoteParameterWrapperAttribute(Type type, bool supportsThisMode = false)
         {
             Type = type;
+            SupportsThisMode = supportsThisMode;
         }
     }
     
@@ -108,9 +110,7 @@ namespace Disguise.RenderStream.Parameters
         /// <summary>
         /// Sets the target on which data from Disguise will be applied.
         /// </summary>
-        /// <param name="targetObject">The target Unity object</param>
-        /// <param name="member">The target member of the Unity object. When null, <paramref name="targetObject"/> is the direct target.</param>
-        void SetTarget(UnityEngine.Object targetObject, MemberInfo member);
+        void SetTarget(Target target);
         
         /// <summary>
         /// Applies data from Disguise onto the target.
@@ -136,30 +136,28 @@ namespace Disguise.RenderStream.Parameters
     abstract class GetterSetter<T>
     {
         public abstract bool IsValid { get; }
-        public abstract void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo);
+        public abstract void SetTarget(Target target);
         public abstract T Get();
         public abstract void Set(T value);
     }
     
     class DefaultGetterSetter<T> : GetterSetter<T>
     {
-        public override bool IsValid => m_Object != null && m_MemberInfo != null;
-        
-        UnityEngine.Object m_Object;
-        MemberInfo m_MemberInfo;
+        public override bool IsValid => m_Target.Object != null && m_Target.MemberInfo != null;
+
+        Target m_Target;
         
 #if !ENABLE_IL2CPP
         Action<UnityEngine.Object, T> m_DynamicSetter;
 #endif
         
-        public override void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
+        public override void SetTarget(Target target)
         {
-            m_Object = targetObject;
-            m_MemberInfo = memberInfo;
+            m_Target = target;
             
 #if !ENABLE_IL2CPP
-            if (m_MemberInfo != null)
-                m_DynamicSetter = DynamicSetterCache<T>.GetSetter(m_MemberInfo);
+            if (m_Target.MemberInfo != null)
+                m_DynamicSetter = DynamicSetterCache<T>.GetSetter(m_Target.MemberInfo);
 #endif
         }
 
@@ -174,53 +172,51 @@ namespace Disguise.RenderStream.Parameters
 #if ENABLE_IL2CPP
             SetValueByReflection(value);
 #else
-            m_DynamicSetter.Invoke(m_Object, value);
+            m_DynamicSetter.Invoke(m_Target.Object, value);
 #endif
         }
         
         T GetValueByReflection()
         {
-            return m_MemberInfo switch
+            return m_Target.MemberInfo switch
             {
-                FieldInfo field => (T)field.GetValue(m_Object),
-                PropertyInfo property => (T)property.GetValue(m_Object),
-                _ => throw new ArgumentOutOfRangeException(nameof(m_MemberInfo), $"Invalid member type {m_MemberInfo?.GetType().Name}.")
+                FieldInfo field => (T)field.GetValue(m_Target.Object),
+                PropertyInfo property => (T)property.GetValue(m_Target.Object),
+                _ => throw new ArgumentOutOfRangeException(nameof(m_Target.MemberInfo), $"Invalid member type {m_Target.MemberInfo?.GetType().Name}.")
             };
         }
 
         void SetValueByReflection(T value)
         {
-            if (m_MemberInfo is FieldInfo field)
+            if (m_Target.MemberInfo is FieldInfo field)
             {
-                field.SetValue(m_Object, value);
+                field.SetValue(m_Target.Object, value);
             }
-            else if (m_MemberInfo is PropertyInfo property)
+            else if (m_Target.MemberInfo is PropertyInfo property)
             {
-                property.SetValue(m_Object, value);
+                property.SetValue(m_Target.Object, value);
             }
             else
             {
-                throw new ArgumentOutOfRangeException(nameof(m_MemberInfo), $"Invalid member type {m_MemberInfo?.GetType().Name}.");
+                throw new ArgumentOutOfRangeException(nameof(m_Target.MemberInfo), $"Invalid member type {m_Target.MemberInfo?.GetType().Name}.");
             }
         }
     }
     
     class ThisGetterSetter<T> : GetterSetter<T> where T : UnityEngine.Object
     {
-        public override bool IsValid => m_Object != null && m_MemberInfo == null;
+        public override bool IsValid => m_Target.Object != null && m_Target.MemberInfo == null;
+
+        Target m_Target;
         
-        UnityEngine.Object m_Object;
-        MemberInfo m_MemberInfo;
-        
-        public override void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
+        public override void SetTarget(Target target)
         {
-            m_Object = targetObject;
-            m_MemberInfo = memberInfo;
+            m_Target = target;
         }
 
         public override T Get()
         {
-            return (T)m_Object;
+            return (T)m_Target.Object;
         }
 
         public override void Set(T value)
@@ -248,9 +244,9 @@ namespace Disguise.RenderStream.Parameters
         public virtual bool IsValid => m_GetterSetter.IsValid;
 
         /// <inheritdoc/>
-        public virtual void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
+        public virtual void SetTarget(Target target)
         {
-            m_GetterSetter.SetTarget(targetObject, memberInfo);
+            m_GetterSetter.SetTarget(target);
         }
 
         /// <summary>
@@ -288,9 +284,9 @@ namespace Disguise.RenderStream.Parameters
         ThisGetterSetter<T> m_ThisGetterSetter = new ThisGetterSetter<T>();
 
         /// <inheritdoc/>
-        public override void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
+        public override void SetTarget(Target target)
         {
-            if (memberInfo == null)
+            if (target.IsThisMode)
             {
                 GetterSetter = m_ThisGetterSetter;
             }
@@ -299,7 +295,7 @@ namespace Disguise.RenderStream.Parameters
                 GetterSetter = m_GetterSetter;
             }
             
-            base.SetTarget(targetObject, memberInfo);
+            base.SetTarget(target);
         }
     }
 }

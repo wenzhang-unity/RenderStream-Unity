@@ -71,9 +71,9 @@ namespace Disguise.RenderStream.Parameters
 
         public override bool IsValid => m_Target.IsValid;
         
-        public override void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
+        public override void SetTarget(Target target)
         {
-            m_Target.SetTarget(targetObject, memberInfo);
+            m_Target.SetTarget(target);
         }
 
         public TData GetTarget()
@@ -101,9 +101,9 @@ namespace Disguise.RenderStream.Parameters
 
         public override bool IsValid => m_Target.IsValid;
         
-        public override void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
+        public override void SetTarget(Target target)
         {
-            m_Target.SetTarget(targetObject, memberInfo);
+            m_Target.SetTarget(target);
         }
 
         public override bool Get()
@@ -145,10 +145,10 @@ namespace Disguise.RenderStream.Parameters
             
         }
 
-        public virtual void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
+        public virtual void SetTarget(Target target)
         {
-            m_OverrideFlagImpl.SetTarget(targetObject, memberInfo);
-            m_DataImpl.SetTarget(targetObject, memberInfo);
+            m_OverrideFlagImpl.SetTarget(target);
+            m_DataImpl.SetTarget(target);
             
             if (m_DataImpl.IsValid)
             {
@@ -395,11 +395,11 @@ namespace Disguise.RenderStream.Parameters
 
         public override bool IsValid => m_Target.IsValid;
         
-        public override void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
+        public override void SetTarget(Target target)
         {
-            m_Target.SetTarget(targetObject, memberInfo);
+            m_Target.SetTarget(target);
 
-            var targetType = ReflectionHelper.ResolveFieldOrPropertyType(memberInfo);
+            var targetType = ReflectionHelper.ResolveFieldOrPropertyType(target.MemberInfo);
             
             // We know for sure every VolumeParameter<ConcreteEnum> inherits from VolumeParameter<T>
             var info = targetType.GetProperty(nameof(VolumeParameter<object>.value));
@@ -446,10 +446,10 @@ namespace Disguise.RenderStream.Parameters
             m_DataImpl.GetterSetter = m_EnumGetterSetter;
         }
         
-        public override void SetTarget(UnityEngine.Object targetObject, MemberInfo memberInfo)
+        public override void SetTarget(Target target)
         {
-            m_OverrideFlagImpl.SetTarget(targetObject, memberInfo);
-            m_DataImpl.SetTarget(targetObject, memberInfo);
+            m_OverrideFlagImpl.SetTarget(target);
+            m_DataImpl.SetTarget(target);
             
             // Overriden to skip the SetupVolumeParameter step because it's troublesome to cast a
             // VolumeParameter<ConcreteEnum> to any more general VolumeParameter<T>
