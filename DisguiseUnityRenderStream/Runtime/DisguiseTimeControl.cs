@@ -5,7 +5,7 @@ using System;
 
 namespace Disguise.RenderStream
 {
-    [AddComponentMenu("Disguise RenderStream/Time Control")]
+    [AddComponentMenu("Disguise RenderStream/Disguise Time Control")]
     [RequireComponent(typeof(PlayableDirector))]
     public class DisguiseTimeControl : MonoBehaviour
     {

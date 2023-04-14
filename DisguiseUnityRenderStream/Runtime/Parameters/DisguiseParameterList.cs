@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
 
 namespace Disguise.RenderStream.Parameters
 {
-    [Serializable]
+    [AddComponentMenu("Disguise RenderStream/Disguise Parameter List")]
     class DisguiseParameterList : MonoBehaviour
     {
         [SerializeField]
