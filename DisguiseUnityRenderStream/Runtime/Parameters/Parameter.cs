@@ -117,15 +117,19 @@ namespace Disguise.RenderStream.Parameters
                         if (m_Component == null)
                         {
                             // A new Asset or GameObject of the same type?
-                            resetMemberInfo = value.GetType() != m_Object.GetType();
+                            resetMemberInfo = !m_Object.GetType().IsInstanceOfType(value);
                         }
                         else if (value is GameObject newGameObject)
                         {
                             // A new GameObject that has the same Component?
-                            if (newGameObject.GetComponent(m_Component.GetType()) is { } matchingComponent)
+                            foreach (var component in newGameObject.GetComponents<Component>())
                             {
-                                resetMemberInfo = false;
-                                newComponent = matchingComponent;
+                                if (m_Component.GetType().IsInstanceOfType(component))
+                                {
+                                    resetMemberInfo = false;
+                                    newComponent = component;
+                                    break;
+                                }
                             }
                         }
                     }
@@ -160,7 +164,7 @@ namespace Disguise.RenderStream.Parameters
                     // A new Component of a different type?
                     if (!RefreshExtendedInfoIfNeeded() &&
                         m_Component != null && oldComponent != null &&
-                        m_Component.GetType() != oldComponent.GetType())
+                        !oldComponent.GetType().IsInstanceOfType(m_Component))
                     {
                         MemberInfoForEditor = default;
                     }
@@ -214,7 +218,7 @@ namespace Disguise.RenderStream.Parameters
                     }
                     
                     // We haven't found an exact match, but try auto-assign to an object of the same type
-                    if (info.Target.Object.GetType() == m_MemberInfoForRuntime.Target.Object.GetType() &&
+                    if (m_MemberInfoForRuntime.Target.Object.GetType().IsInstanceOfType(info.Target.Object) &&
                         info.MemberType == m_MemberInfoForRuntime.Type &&
                         Target.Equals(info.Target.MemberInfo, m_MemberInfoForRuntime.Target.MemberInfo))
                     {
