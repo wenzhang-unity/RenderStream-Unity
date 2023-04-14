@@ -138,8 +138,16 @@ namespace Disguise.RenderStream.Parameters
 
                 if (check.changed)
                 {
-                    RegisterUndo(Contents.UndoAssignObject);
-                    parameter.Object = selectedObject;
+                    if (selectedObject is Component component)
+                    {
+                        RegisterUndo(Contents.UndoAssignComponent);
+                        parameter.Component = component;
+                    }
+                    else
+                    {
+                        RegisterUndo(Contents.UndoAssignObject);
+                        parameter.Object = selectedObject;
+                    }
                 }
             }
         }
