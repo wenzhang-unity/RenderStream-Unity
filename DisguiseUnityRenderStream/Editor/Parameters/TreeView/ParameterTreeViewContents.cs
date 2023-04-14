@@ -37,7 +37,8 @@ namespace Disguise.RenderStream.Parameters
             
             public static readonly string EmptyGroupSuffix = L10n.Tr(" (Empty)");
             public static readonly string DropdownNoneLabel = L10n.Tr("None");
-            public static readonly string DropdownMissingScriptLabel = L10n.Tr("Missing Script");
+            public static readonly string DropdownMissingComponentLabel = L10n.Tr("Missing (Component)");
+            public static readonly string DropdownMissingScriptLabel = L10n.Tr("Missing (Script)");
 
             public static GUIStyle ComponentPopupStyle;
             public static GUIStyle PropertyPopupStyle;

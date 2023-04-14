@@ -43,6 +43,29 @@ namespace Disguise.RenderStream.Parameters
 
         public void OnEnable()
         {
+#if UNITY_EDITOR
+            // It is possible that the serialized m_MemberInfoForRuntime now points to a member of a different type
+            // (ex "float myParam" changed to "string myParam" in a user script),
+            // in which case we clear the wrapper or recreate it to match
+            if (m_MemberInfoForRuntime.TargetType == null ||
+                !ReflectionHelper.TargetTypeIsSupported(m_MemberInfoForRuntime.TargetType))
+            {
+                m_MemberInfoForEditor = default;
+                m_RemoteParameterWrapper = null;
+            }
+            else if (m_RemoteParameterWrapper != null)
+            {
+                var wrapperTypeShouldBe = ReflectionHelper.GetGetterSetterType(m_MemberInfoForRuntime.TargetType);
+                if (wrapperTypeShouldBe != m_RemoteParameterWrapper.GetType())
+                {
+                    var remoteParameterWrapper = Activator.CreateInstance(wrapperTypeShouldBe) as IRemoteParameterWrapper;
+
+                    m_MemberInfoForRuntime.Apply(remoteParameterWrapper);
+                    m_RemoteParameterWrapper = remoteParameterWrapper;
+                }
+            }
+#endif
+            
             m_MemberInfoForRuntime.Apply(m_RemoteParameterWrapper);
         }
 

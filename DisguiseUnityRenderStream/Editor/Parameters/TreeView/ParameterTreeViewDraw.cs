@@ -158,7 +158,9 @@ namespace Disguise.RenderStream.Parameters
             {
                 string componentButtonLabel;
 
-                if (parameter.Component == null)
+                if (IsMissingReference(parameter.Component))
+                    componentButtonLabel = Contents.DropdownMissingComponentLabel;
+                else if (parameter.Component == null)
                     componentButtonLabel = Contents.DropdownNoneLabel;
                 else if (IsMissingComponent(parameter.Component))
                     componentButtonLabel = Contents.DropdownMissingScriptLabel;
@@ -278,6 +280,12 @@ namespace Disguise.RenderStream.Parameters
             }
                 
             GUI.DrawTexture(rect, icon, ScaleMode.ScaleToFit);
+        }
+
+        bool IsMissingReference<T>(T obj) where T : UnityEngine.Object
+        {
+            // Unity has overriden the == operator to check for destroyed objects
+            return obj is T && obj == null;
         }
 
         bool IsMissingComponent(UnityEngine.Object component)

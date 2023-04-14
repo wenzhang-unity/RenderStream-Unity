@@ -68,6 +68,15 @@ namespace Disguise.RenderStream.Parameters
         bool m_SourceDirty;
 
         public MemberType Type => m_MemberType;
+        
+        public Type TargetType => m_MemberType switch
+        {
+            MemberType.Invalid => null,
+            MemberType.Field => ((FieldInfo)Target.MemberInfo)?.FieldType,
+            MemberType.Property => ((PropertyInfo)Target.MemberInfo)?.PropertyType,
+            MemberType.This => Target.Object.GetType(),
+            _ => throw new ArgumentOutOfRangeException()
+        };
 
         public Target Target
         {

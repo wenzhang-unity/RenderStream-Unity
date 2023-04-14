@@ -5,6 +5,7 @@ using UnityEngine;
 namespace Disguise.RenderStream.Parameters
 {
     [AddComponentMenu("Disguise RenderStream/Disguise Parameter List")]
+    [ExecuteAlways]
     class DisguiseParameterList : MonoBehaviour
     {
         [SerializeField]

@@ -167,13 +167,13 @@ namespace Disguise.RenderStream.Parameters
             return type;
         }
 
-        static bool TargetTypeIsSupported(Type type)
+        public static bool TargetTypeIsSupported(Type type)
         {
             var searchType = GetSearchType(type);
             return s_TypeToRemoteParameterWrapper.ContainsKey(searchType);
         }
         
-        static Type GetGetterSetterType(Type type)
+        public static Type GetGetterSetterType(Type type)
         {
             var searchType = GetSearchType(type);
             return s_TypeToRemoteParameterWrapper[searchType].Type;
