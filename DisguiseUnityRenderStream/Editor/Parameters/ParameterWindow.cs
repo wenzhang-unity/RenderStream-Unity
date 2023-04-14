@@ -60,6 +60,9 @@ namespace Disguise.RenderStream.Parameters
         void OnEnable()
         {
             EditorSceneManager.activeSceneChangedInEditMode += OnSceneLoaded;
+
+            if (m_TreeViewState == null)
+                m_TreeViewState = new TreeViewState();
         }
 
         void OnDisable()
