@@ -10,6 +10,15 @@ namespace Disguise.RenderStream.Parameters
     partial class ParameterTreeView
     {
         /// <summary>
+        /// Declares all tree rows to be capable of receiving drag & drop items.
+        /// More specific filtering is done in <see cref="HandleDragAndDrop"/>.
+        /// </summary>
+        protected override bool CanBeParent(TreeViewItem item)
+        {
+            return true;
+        }
+        
+        /// <summary>
         /// Implements drag & dropping a parameter into the scene view to select its GameObject and frame it.
         /// </summary>
         static DragAndDropVisualMode SceneDropHandler(UnityEngine.Object dropUpon, Vector3 worldPosition, Vector2 viewportPosition, Transform parentForDraggedObjects, bool perform)
@@ -79,179 +88,162 @@ namespace Disguise.RenderStream.Parameters
         /// </remarks>
         protected override DragAndDropVisualMode HandleDragAndDrop(DragAndDropArgs args)
         {
-            // TODO this is messy, break into smaller functions
+            if (DragAndDrop.objectReferences.Length == 0)
+                return DragAndDropVisualMode.Rejected;
             
-            if (args.performDrop)
-            {
-                var newSelection = Array.Empty<int>();
-                
-                switch (args.dragAndDropPosition)
-                {
-                    case DragAndDropPosition.UponItem:
-                        if (DragAndDrop.objectReferences.Length > 0)
-                        {
-                            RegisterUndo(Contents.UndoDragAndDropAssignParameters);
-
-                            if (args.parentItem is ParameterGroupTreeViewItem groupItem)
-                            {
-                                var insertAtIndex = args.insertAtIndex;
-                                
-                                newSelection = new int[DragAndDrop.objectReferences.Length];
-                                for (var i = 0; i < DragAndDrop.objectReferences.Length; i++)
-                                {
-                                    var obj = DragAndDrop.objectReferences[i];
-                                    newSelection[i] = AddGenericObjectToGroup(groupItem.Group, obj, insertAtIndex++).ID;
-                                }
-                            }
-                            else if (args.parentItem is ParameterTreeViewItem parameterItem)
-                            {
-                                var firstObject = DragAndDrop.objectReferences[0];
-                                AssignGenericObjectToParameter(parameterItem.Parameter, firstObject);
-                                newSelection = new []{ parameterItem.Parameter.ID };
-                            }
-                            else
-                            {
-                                throw new NotImplementedException();
-                            }
-                        }
-                        
-                        break;
-
-                    case DragAndDropPosition.BetweenItems:
-                        if (DragAndDrop.objectReferences.Length > 0)
-                        {
-                            RegisterUndo(Contents.UndoDragAndDropNewParameters);
-
-                            if (args.parentItem == rootItem)
-                            {
-                                var newGroup = new ParameterGroup
-                                {
-                                    Name = GetUniqueGroupName(Contents.NewGroupName),
-                                    ID = m_ParameterList.ReserveID()
-                                };
-                                
-                                newSelection = new int[DragAndDrop.objectReferences.Length];
-                                for (var i = 0; i < DragAndDrop.objectReferences.Length; i++)
-                                {
-                                    var obj = DragAndDrop.objectReferences[i];
-                                    newSelection[i] = AddGenericObjectToGroup(newGroup, obj).ID;
-                                }
-                            
-                                m_ParameterList.m_Groups.Insert(args.insertAtIndex, newGroup);
-                            }
-                            else if (args.parentItem is ParameterGroupTreeViewItem groupItem)
-                            {
-                                var insertAtIndex = args.insertAtIndex;
-                                
-                                newSelection = new int[DragAndDrop.objectReferences.Length];
-                                for (var i = 0; i < DragAndDrop.objectReferences.Length; i++)
-                                {
-                                    var obj = DragAndDrop.objectReferences[i];
-                                    newSelection[i] = AddGenericObjectToGroup(groupItem.Group, obj, insertAtIndex++).ID;
-                                }
-                            }
-                            else
-                            {
-                                throw new NotImplementedException();
-                            }
-                        }
-                        
-                        break;
-        
-                    case DragAndDropPosition.OutsideItems:
-                        if (DragAndDrop.objectReferences.Length > 0)
-                        {
-                            RegisterUndo(Contents.UndoDragAndDropNewParameters);
-                            
-                            var newGroup = new ParameterGroup
-                            {
-                                Name = GetUniqueGroupName(Contents.NewGroupName),
-                                ID = m_ParameterList.ReserveID()
-                            };
-
-                            newSelection = new int[DragAndDrop.objectReferences.Length];
-                            for (var i = 0; i < DragAndDrop.objectReferences.Length; i++)
-                            {
-                                var obj = DragAndDrop.objectReferences[i];
-                                newSelection[i] = AddGenericObjectToGroup(newGroup, obj).ID;
-                            }
-                            
-                            m_ParameterList.m_Groups.Add(newGroup);
-                        }
-                        
-                        break;
-        
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-
-                if (newSelection.Length > 0)
-                {
-                    RegisterSelectionUndoRedo();
-                    Reload();
-                    SelectRevealAndFrame(newSelection);
-                }
-                
-                return DragAndDropVisualMode.Move;
-            }
+            int[] newSelection;
+            DragAndDropVisualMode mode;
             
             switch (args.dragAndDropPosition)
             {
                 case DragAndDropPosition.UponItem:
-                    if (DragAndDrop.objectReferences.Length > 0)
-                    {
-                        if (args.parentItem is ParameterGroupTreeViewItem)
-                        {
-                            return DragAndDropVisualMode.Copy;
-                        }
-                        
-                        if (args.parentItem is ParameterTreeViewItem)
-                        {
-                            if (DragAndDrop.objectReferences.Length == 1)
-                                return DragAndDropVisualMode.Link;
-                        }
-                    }
-                    
+                    mode = DragAndDropOntoItem(args, out newSelection);
                     break;
 
                 case DragAndDropPosition.BetweenItems:
-                    if (DragAndDrop.objectReferences.Length > 0)
-                    {
-                        if (args.parentItem == rootItem)
-                        {
-                            return DragAndDropVisualMode.Copy;
-                        }
-                        
-                        if (args.parentItem is ParameterGroupTreeViewItem)
-                        {
-                            return DragAndDropVisualMode.Copy;
-                        }
-                    }
-                    
+                    mode = DragAndDropBetweenItems(args, out newSelection);
                     break;
     
                 case DragAndDropPosition.OutsideItems:
-                    if (DragAndDrop.objectReferences.Length > 0)
-                    {
-                        return DragAndDropVisualMode.Copy;
-                    }
-                    
+                    mode = DragAndDropOutsideItems(args, out newSelection);
                     break;
     
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+
+            if (newSelection is { Length: > 0 })
+            {
+                RegisterSelectionUndoRedo();
+                Reload();
+                SelectRevealAndFrame(newSelection);
+            }
             
-            return DragAndDropVisualMode.Rejected;
+            return mode;
         }
-        
-        /// <summary>
-        /// Declares all tree rows to be capable of receiving drag & drop items.
-        /// More specific filtering is done in <see cref="HandleDragAndDrop"/>.
-        /// </summary>
-        protected override bool CanBeParent(TreeViewItem item)
+
+        DragAndDropVisualMode DragAndDropOntoItem(DragAndDropArgs args, out int[] newSelection)
         {
-            return true;
+            newSelection = default;
+
+            if (args.parentItem is ParameterGroupTreeViewItem groupItem)
+            {
+                if (args.performDrop)
+                {
+                    RegisterUndo(Contents.UndoDragAndDropAssignParameters);
+                    
+                    var insertAtIndex = args.insertAtIndex;
+
+                    newSelection = new int[DragAndDrop.objectReferences.Length];
+                    for (var i = 0; i < DragAndDrop.objectReferences.Length; i++)
+                    {
+                        var obj = DragAndDrop.objectReferences[i];
+                        newSelection[i] = AddGenericObjectToGroup(groupItem.Group, obj, insertAtIndex++).ID;
+                    }
+                }
+
+                return DragAndDropVisualMode.Copy;
+            }
+            else if (args.parentItem is ParameterTreeViewItem parameterItem)
+            {
+                if (DragAndDrop.objectReferences.Length == 1)
+                {
+                    if (args.performDrop)
+                    {
+                        RegisterUndo(Contents.UndoDragAndDropAssignParameters);
+                        
+                        var firstObject = DragAndDrop.objectReferences[0];
+                        AssignGenericObjectToParameter(parameterItem.Parameter, firstObject);
+                        newSelection = new[] { parameterItem.Parameter.ID };
+                    }
+
+                    return DragAndDropVisualMode.Link;
+                }
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+
+            newSelection = default;
+            return DragAndDropVisualMode.Move;
+        }
+
+        DragAndDropVisualMode DragAndDropBetweenItems(DragAndDropArgs args, out int[] newSelection)
+        {
+            newSelection = default;
+            
+            if (args.parentItem == rootItem)
+            {
+                if (args.performDrop)
+                {
+                    RegisterUndo(Contents.UndoDragAndDropNewParameters);
+                    
+                    var newGroup = new ParameterGroup
+                    {
+                        Name = GetUniqueGroupName(Contents.NewGroupName),
+                        ID = m_ParameterList.ReserveID()
+                    };
+
+                    newSelection = new int[DragAndDrop.objectReferences.Length];
+                    for (var i = 0; i < DragAndDrop.objectReferences.Length; i++)
+                    {
+                        var obj = DragAndDrop.objectReferences[i];
+                        newSelection[i] = AddGenericObjectToGroup(newGroup, obj).ID;
+                    }
+
+                    m_ParameterList.m_Groups.Insert(args.insertAtIndex, newGroup);
+                }
+            }
+            else if (args.parentItem is ParameterGroupTreeViewItem groupItem)
+            {
+                if (args.performDrop)
+                {
+                    RegisterUndo(Contents.UndoDragAndDropNewParameters);
+                    
+                    var insertAtIndex = args.insertAtIndex;
+
+                    newSelection = new int[DragAndDrop.objectReferences.Length];
+                    for (var i = 0; i < DragAndDrop.objectReferences.Length; i++)
+                    {
+                        var obj = DragAndDrop.objectReferences[i];
+                        newSelection[i] = AddGenericObjectToGroup(groupItem.Group, obj, insertAtIndex++).ID;
+                    }
+                }
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+
+            return DragAndDropVisualMode.Copy;
+        }
+
+        DragAndDropVisualMode DragAndDropOutsideItems(DragAndDropArgs args, out int[] newSelection)
+        {
+            newSelection = default;
+            
+            if (args.performDrop)
+            {
+                RegisterUndo(Contents.UndoDragAndDropNewParameters);
+
+                var newGroup = new ParameterGroup
+                {
+                    Name = GetUniqueGroupName(Contents.NewGroupName),
+                    ID = m_ParameterList.ReserveID()
+                };
+
+                newSelection = new int[DragAndDrop.objectReferences.Length];
+                for (var i = 0; i < DragAndDrop.objectReferences.Length; i++)
+                {
+                    var obj = DragAndDrop.objectReferences[i];
+                    newSelection[i] = AddGenericObjectToGroup(newGroup, obj).ID;
+                }
+
+                m_ParameterList.m_Groups.Add(newGroup);
+            }
+
+            return DragAndDropVisualMode.Copy;
         }
         
         Parameter AddGenericObjectToGroup(ParameterGroup group, UnityEngine.Object obj, int insertAtIndex = -1)
