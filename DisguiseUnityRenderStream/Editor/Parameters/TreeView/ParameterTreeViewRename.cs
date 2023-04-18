@@ -1,73 +1,102 @@
 using System;
 using System.Linq;
 using UnityEditor;
-using UnityEditor.IMGUI.Controls;
+using UnityEngine.UIElements;
 
 namespace Disguise.RenderStream.Parameters
 {
     partial class ParameterTreeView
     {
-        /// <summary>
-        /// Checks if the specified item supports renaming.
-        /// </summary>
-        protected override bool CanRename(TreeViewItem item)
+        void RenameSelection()
         {
+            BeginRenameAtIndex(selectedIndex);
+        }
+        
+        protected override bool CanRename(int index)
+        {
+            var item = GetItemDataForIndex<ItemData>(index);
+            
             // Cannot rename the default group
-            return item is not ParameterGroupTreeViewItem { Group: { IsDefaultGroup: true } };
+            return item is not { Group: { IsDefaultGroup: true } };
         }
 
-        /// <summary>
-        /// Applies renaming onto an item.
-        /// </summary>
-        protected override void RenameEnded(RenameEndedArgs args)
+        protected override void RenameEnded(int id, bool canceled = false)
         {
-            if (!args.acceptedRename)
-                return;
+            var index = viewController.GetIndexForId(id);
             
-            if (args.newName == args.originalName)
-                return;
-
-            var item = FindItem(args.itemID, rootItem);
-            
-            if (item is ParameterGroupTreeViewItem groupItem)
+            if (canceled)
             {
-                if (string.IsNullOrWhiteSpace(args.newName))
+                RefreshItem(index);
+                return;
+            }
+
+            var root = GetRootElementForId(id);
+            var label = root.Q<RenameableLabel>();
+            var newName = label.text;
+            var item = GetItemDataForId<ItemData>(id);
+            
+            if (item.Group is { } group)
+            {
+                if (group.Name == newName)
+                {
+                    RefreshItem(index);
                     return;
-                
+                }
+
+                if (string.IsNullOrWhiteSpace(newName))
+                {
+                    RefreshItem(index);
+                    return;
+                }
+
                 RegisterUndo(Contents.UndoRenameParameter);
                 
-                groupItem.Group.Name = GetUniqueGroupName(args.newName);
-                
-                Reload();
+                group.Name = GetUniqueGroupName(newName);
             }
-            else if (item is ParameterTreeViewItem parameterItem)
+            else if (item.Parameter is { } parameter)
             {
+                if (parameter.Name == newName)
+                {
+                    RefreshItem(index);
+                    return;
+                }
+
                 // Auto-name
-                if (string.IsNullOrEmpty(args.newName) && parameterItem.Parameter.m_HasCustomName)
+                if (string.IsNullOrEmpty(newName) && parameter.m_HasCustomName)
                 {
                     RegisterUndo(Contents.UndoRenameParameter);
                     
-                    parameterItem.Parameter.m_HasCustomName = false;
-                    parameterItem.Parameter.AutoAssignName();
-                    
-                    Reload();
+                    parameter.m_HasCustomName = false;
+                    parameter.AutoAssignName();
                 }
                 // Custom name
                 else
                 {
                     RegisterUndo(Contents.UndoRenameParameter);
                     
-                    var parameterGroup = GetGroupOfParameterItem(parameterItem);
-                    parameterItem.Parameter.Name = GetUniqueParameterName(args.newName, parameterGroup);
-                    parameterItem.Parameter.m_HasCustomName = true;
-                    
-                    Reload();
+                    var parameterGroup = GetGroupOfParameter(parameter);
+                    parameter.Name = GetUniqueParameterName(newName, parameterGroup);
+                    parameter.m_HasCustomName = true;
                 }
             }
             else
             {
                 throw new NotImplementedException();
             }
+            
+            RefreshItem(index);
+        }
+        
+        protected override string GetItemTextForIndex(int index)
+        {
+            var itemData = GetItemDataForIndex<ItemData>(index);
+
+            if (itemData.Group is { } group)
+                return group.Name;
+            else if (itemData.Parameter is { } parameter)
+                return parameter.Name;
+            else
+                throw new NotSupportedException();
         }
         
         string GetUniqueGroupName(string baseName)

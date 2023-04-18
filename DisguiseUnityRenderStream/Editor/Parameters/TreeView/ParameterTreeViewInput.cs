@@ -1,80 +1,68 @@
 using System;
 using System.Linq;
-using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Disguise.RenderStream.Parameters
 {
     partial class ParameterTreeView
     {
-        /// <summary>
-        /// Handle keyboard shortcuts for delete and duplicate
-        /// </summary>
-        protected override void KeyEvent()
+        protected override void KeyboardNavigation(KeyboardNavigationOperation operation, EventBase evt)
         {
-            var evt = Event.current;
-            
-            if (evt.type != EventType.KeyDown)
-                return;
-            
-            if (evt.keyCode is KeyCode.Delete or KeyCode.Backspace)
-            {
-                DeleteSelection();
-                evt.Use();
-            }
-            
-            if ((evt.control || evt.command) && evt.keyCode == KeyCode.D)
-            {
-                DuplicateSelection();
-                evt.Use();
-            }
-        }
-
-        /// <summary>
-        /// Handle Ctrl-A select all command
-        /// </summary>
-        protected override void CommandEventHandling()
-        {
-            var current = Event.current;
-            
-            if (HasFocus() &&
-                current.type is EventType.ExecuteCommand &&
-                current.commandName == "SelectAll")
+            if (operation == KeyboardNavigationOperation.SelectAll)
             {
                 if (HasSelection())
                 {
-                    var firstID = GetSelection()[0];
-                    var firstItem = FindItem(firstID, rootItem);
+                    var firstItem = (ItemData)selectedItem;
 
-                    if (firstItem is ParameterGroupTreeViewItem)
+                    if (firstItem.IsGroup)
                     {
-                        // Select all groups
                         RegisterSelectionUndoRedo();
-                        SelectRevealAndFrame(rootItem.children.Select(x => x.id).ToArray());
+                        
+                        SelectAllGroups();
                     }
-                    else if (firstItem is ParameterTreeViewItem)
+                    else if (firstItem.IsParameter)
                     {
-                        // Select all parameters under the current group
                         RegisterSelectionUndoRedo();
-                        SelectRevealAndFrame(firstItem.parent.children.Select(x => x.id).ToArray());
+
+                        var targetGroup = ResolveItemGroup(firstItem);
+                        SelectAllParametersInGroup(targetGroup);
                     }
                     else
                     {
-                        throw new NotImplementedException();
+                        throw new NotSupportedException();
                     }
                 }
                 else
                 {
-                    // Select all groups
                     RegisterSelectionUndoRedo();
-                    SelectRevealAndFrame(rootItem.children.Select(x => x.id).ToArray());
+                    
+                    SelectAllGroups();
                 }
                 
-                current.Use();
-                GUIUtility.ExitGUI();
-                return;
+                evt.StopImmediatePropagation();
             }
-            
-            base.CommandEventHandling();
+        }
+
+        void SelectAllGroups()
+        {
+            var IDsToSelect = m_ParameterList.m_Groups.Select(group => group.ID);
+            SelectRevealAndFrame(IDsToSelect);
+        }
+
+        ParameterGroup ResolveItemGroup(ItemData item)
+        {
+            if (item.IsGroup)
+                return item.Group;
+            else if (item.IsParameter)
+                return GetGroupOfParameter(item.Parameter);
+            else
+                throw new NotSupportedException();
+        }
+        
+        void SelectAllParametersInGroup(ParameterGroup group)
+        {
+            var IDsToSelect = group.m_Parameters.Select(parameter => parameter.ID);
+            SelectRevealAndFrame(IDsToSelect);
         }
     }
 }

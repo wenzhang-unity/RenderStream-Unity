@@ -19,56 +19,44 @@ namespace Disguise.RenderStream.Parameters
             public static readonly string UndoAssignProperty = L10n.Tr("Assigned property to parameter");
             public static readonly string UndoDragAndDropNewParameters = L10n.Tr("Drag and drop new parameters");
             public static readonly string UndoDragAndDropAssignParameters = L10n.Tr("Drag and drop assign parameters");
-            
-            public static readonly GUIContent NameColumnHeader = L10n.TextContent("Name");
-            public static readonly GUIContent ObjectColumnHeader = L10n.TextContent("Object");
-            public static readonly GUIContent ComponentColumnHeader = L10n.TextContent("Component");
-            public static readonly GUIContent PropertyColumnHeader = L10n.TextContent("Property");
-            
-            public static readonly GUIContent ContextMenuCreateNewGroup = L10n.TextContent("Create New Group");
-            public static readonly GUIContent ContextMenuCreateNewParameter = L10n.TextContent("Create New Parameter");
-            public static readonly GUIContent ContextMenuAddNewParameter = L10n.TextContent("Add New Parameter");
-            public static readonly GUIContent ContextMenuRename = L10n.TextContent("Rename");
-            public static readonly GUIContent ContextMenuDuplicate = L10n.TextContent("Duplicate");
-            public static readonly GUIContent ContextMenuDelete = L10n.TextContent("Delete");
-            
+
+            public static readonly string NameColumnHeader = L10n.Tr("Name");
+            public static readonly string ObjectColumnHeader = L10n.Tr("Object");
+            public static readonly string ComponentColumnHeader = L10n.Tr("Component");
+            public static readonly string PropertyColumnHeader = L10n.Tr("Property");
+
+            public static readonly string ContextMenuCreateNewGroup = L10n.Tr("Create New Group");
+            public static readonly string ContextMenuCreateNewParameter = L10n.Tr("Create New Parameter");
+            public static readonly string ContextMenuAddNewParameter = L10n.Tr("Add New Parameter");
+            public static readonly string ContextMenuRename = L10n.Tr("Rename");
+            public static readonly string ContextMenuDuplicate = L10n.Tr("Duplicate");
+            public static readonly string ContextMenuDelete = L10n.Tr("Delete");
+
             public static readonly string NewGroupName = L10n.Tr("New Group");
             public static readonly string NewParameterName = L10n.Tr("New Parameter");
-            
+
             public static readonly string EmptyGroupSuffix = L10n.Tr(" (Empty)");
             public static readonly string DropdownNoneLabel = L10n.Tr("None");
             public static readonly string DropdownMissingComponentLabel = L10n.Tr("Missing (Component)");
             public static readonly string DropdownMissingScriptLabel = L10n.Tr("Missing (Script)");
 
-            public static GUIStyle ComponentPopupStyle;
-            public static GUIStyle PropertyPopupStyle;
             public static readonly Texture WarningIcon = L10n.IconContent("console.warnicon").image;
-            public static Texture GameObjectIcon;
+            static Texture s_GameObjectIcon;
+            public static Texture GameObjectIcon
+            {
+                get
+                {
+                    if (s_GameObjectIcon == null)
+                    {
+                        s_GameObjectIcon = EditorGUIUtility.ObjectContent(null, typeof(GameObject)).image;
+                    }
+                
+                    return s_GameObjectIcon;
+                }
+            }
 
             public static readonly string DragTitle = L10n.Tr("Parameter(s)");
             public const string DragDataKey = "Disguise.DragData";
-
-            // EditorStyles is only guaranteed to be loaded in OnGUI
-            public static void OnGUILazyLoad()
-            {
-                if (ComponentPopupStyle == null)
-                {
-                    ComponentPopupStyle = new GUIStyle(EditorStyles.popup);
-                    ComponentPopupStyle.fixedHeight = 20f;
-                    ComponentPopupStyle.padding.left = 20;
-                }
-
-                if (PropertyPopupStyle == null)
-                {
-                    PropertyPopupStyle = new GUIStyle(EditorStyles.popup);
-                    PropertyPopupStyle.fixedHeight = 20f;
-                }
-
-                if (GameObjectIcon == null)
-                {
-                    GameObjectIcon = EditorGUIUtility.ObjectContent(null, typeof(GameObject)).image;
-                }
-            }
         }
     }
 }

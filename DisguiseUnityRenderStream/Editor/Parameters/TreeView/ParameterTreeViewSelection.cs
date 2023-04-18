@@ -1,13 +1,29 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
-using UnityEditor.IMGUI.Controls;
+using UnityEngine.UIElements;
 
 namespace Disguise.RenderStream.Parameters
 {
     partial class ParameterTreeView
     {
+        bool HasSelection()
+        {
+            return selectedIndex >= 0;
+        }
+        
+        void SetupSelection()
+        {
+            selectionType = SelectionType.Multiple;
+
+            selectedIndicesChanged += SelectionChanged;
+        }
+        
         public interface ITreeViewStateStorage
         {
+            List<int> SelectedIDs { get; set; }
+
             UnityEngine.Object GetStorageObject();
         }
 
@@ -20,7 +36,7 @@ namespace Disguise.RenderStream.Parameters
         }
 
         /// <summary>
-        /// <see cref="TreeView.SelectionChanged"/> notifies us after the selection has been changed, but the undo
+        /// <see cref="UnityEditor.IMGUI.Controls.TreeView.SelectionChanged"/> notifies us after the selection has been changed, but the undo
         /// system expects the selection before it was changed to be registered. So we keep track of the previous
         /// selection to provide it to the undo system.
         /// </summary>
@@ -29,19 +45,21 @@ namespace Disguise.RenderStream.Parameters
         /// <summary>
         /// Selects the provided items, expanding the hierarchy and ensuring that the last item in the selection is framed.
         /// </summary>
-        void SelectRevealAndFrame(IList<int> selectedIds)
+        void SelectRevealAndFrame(IEnumerable<int> selectedIds)
         {
-            SetSelection(selectedIds, TreeViewSelectionOptions.RevealAndFrame);
+            var enumerable = selectedIds.ToList();
+            SetSelectionById(enumerable);
+            ScrollToItemById(enumerable.Last());
         }
 
         /// <summary>
         /// Registers the new selection in the undo system.
         /// </summary>
-        protected override void SelectionChanged(IList<int> selectedIds)
+        void SelectionChanged(IEnumerable<int> selectedIds)
         {
-            RegisterPostSelectionUndoRedo();
+            EnforceSelectionType();
             
-            base.SelectionChanged(selectedIds);
+            RegisterPostSelectionUndoRedo();
         }
 
         /// <summary>
@@ -52,13 +70,13 @@ namespace Disguise.RenderStream.Parameters
             // The undo system expects the state of the object before the change.
             // We register the previous selection in the undo system before restoring the current selection.
             
-            var currentSelection = state.selectedIDs;
-            state.selectedIDs = m_PreviousSelection;
+            var currentSelection = selectedIndices.Select(GetIdForIndex).ToList();
+            m_StateStorage.SelectedIDs = m_PreviousSelection;
             
             Undo.RegisterCompleteObjectUndo(m_StateStorage.GetStorageObject(), "Change parameter selection");
             
-            state.selectedIDs = currentSelection;
-            m_PreviousSelection = new List<int>(currentSelection);
+            m_StateStorage.SelectedIDs = currentSelection;
+            m_PreviousSelection = currentSelection;
         }
 
         /// <summary>
@@ -66,25 +84,32 @@ namespace Disguise.RenderStream.Parameters
         /// </summary>
         void OnUndoRedoPerformed()
         {
-            Reload();
-
-            SetSelection(state.selectedIDs);
+            RebuildAfterUndoRedo();
+            
+            SetSelectionByIdWithoutNotify(m_StateStorage.SelectedIDs);
         }
-        
+
         /// <summary>
-        /// Ensures multi-selection only includes items of the same type: either all groups or all parameters.
+        /// Ensures only groups or only parameters are multi-selected at any given time.
         /// </summary>
-        protected override bool CanMultiSelect(TreeViewItem item)
+        void EnforceSelectionType()
         {
             if (!HasSelection())
+                return;
+            
+            var currentItem = (ItemData)selectedItems.Last();
+
+            if (currentItem == null)
+                return;
+            
+            var filteredSelection = selectedItems.Cast<ItemData>().Where(x => x.IsGroup == currentItem.IsGroup).Select(x => x switch
             {
-                return true;
-            }
-
-            var firstItemIndex = GetSelection()[0];
-            var firstItem = FindItem(firstItemIndex, rootItem);
-
-            return firstItem != null && item.GetType() == firstItem.GetType();
+                { IsGroup: true } => x.Group.ID,
+                { IsParameter: true } => x.Parameter.ID,
+                _ => throw new NotSupportedException()
+            });
+                
+            SetSelectionByIdWithoutNotify(filteredSelection);
         }
     }
 }

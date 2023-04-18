@@ -1,5 +1,5 @@
+using System.Collections.Generic;
 using UnityEditor;
-using UnityEditor.IMGUI.Controls;
 using UnityEditor.SceneManagement;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -10,6 +10,12 @@ namespace Disguise.RenderStream.Parameters
 {
     public class ParameterWindow : EditorWindow, ParameterTreeView.ITreeViewStateStorage
     {
+        List<int> ParameterTreeView.ITreeViewStateStorage.SelectedIDs
+        {
+            get => m_TreeSelectedIds;
+            set => m_TreeSelectedIds = value;
+        }
+
         Object ParameterTreeView.ITreeViewStateStorage.GetStorageObject()
         {
             return this;
@@ -42,10 +48,9 @@ namespace Disguise.RenderStream.Parameters
         StyleSheet m_Style;
 
         [SerializeField]
-        TreeViewState m_TreeViewState;
+        List<int> m_TreeSelectedIds;
 
         DisguiseParameterList m_ParameterList;
-        ParameterTreeView m_TreeView;
 
         bool m_GUICreated;
         ToolbarSearchField m_SearchField;
@@ -55,14 +60,11 @@ namespace Disguise.RenderStream.Parameters
         Button m_CreateParameterListButton;
         VisualElement m_ExtraParameterListSection;
         ExtraInstanceListView m_ExtraParameterListNames;
-        IMGUIContainer m_IMGUIContainer;
+        ParameterTreeView m_TreeView;
 
         void OnEnable()
         {
             EditorSceneManager.activeSceneChangedInEditMode += OnSceneLoaded;
-
-            if (m_TreeViewState == null)
-                m_TreeViewState = new TreeViewState();
         }
 
         void OnDisable()
@@ -104,8 +106,8 @@ namespace Disguise.RenderStream.Parameters
             settingsButton.clicked += OnDisguiseSettingsButtonClicked;
 
             var createButton = rootVisualElement.Q<ToolbarMenu>();
-            createButton.menu.AppendAction(Contents.ContextCreateNewGroup, action => CreateNewGroup());
-            createButton.menu.AppendAction(Contents.ContextCreateNewParameter, action => CreateNewParameter());
+            createButton.menu.AppendAction(Contents.ContextCreateNewGroup, _ => CreateNewGroup());
+            createButton.menu.AppendAction(Contents.ContextCreateNewParameter, _ => CreateNewParameter());
 
             m_CreateParameterListSection = rootVisualElement.Q<VisualElement>("create-parameter-list-section");
             m_CreateParameterListSection.SetDisplay(false);
@@ -114,35 +116,14 @@ namespace Disguise.RenderStream.Parameters
 
             m_ExtraParameterListSection = rootVisualElement.Q<VisualElement>("extra-parameter-list-section");
             m_ExtraParameterListNames = rootVisualElement.Q<ExtraInstanceListView>();
-            
-            m_IMGUIContainer = rootVisualElement.Q<IMGUIContainer>();
-            m_IMGUIContainer.onGUIHandler = DoTreeView;
+
+            m_TreeView = new ParameterTreeView();
+            rootVisualElement.Add(m_TreeView);
 
             m_GUICreated = true;
 
             PollScene();
             rootVisualElement.schedule.Execute(PollScene).Every(250);
-        }
-
-        /// <summary>
-        /// Draws the TreeView in the IMGUIContainer.
-        /// </summary>
-        void DoTreeView()
-        {
-            var current = Event.current;
-            if (current.type == EventType.KeyDown &&
-                current.control &&
-                current.keyCode == KeyCode.F)
-            {
-                m_SearchField.Focus();
-                current.Use();
-            }
-            
-            if (m_TreeView != null)
-            {
-                var imguiContainerRect = m_IMGUIContainer.contentRect;
-                m_TreeView.OnGUI(new Rect(0, 0, imguiContainerRect.width, imguiContainerRect.height));
-            }
         }
         
         void CreateNewGroup()
@@ -157,7 +138,7 @@ namespace Disguise.RenderStream.Parameters
         
         void SetSearchString(string searchString)
         {
-            m_TreeView.searchString = searchString;
+            m_TreeView.SearchString = searchString;
         }
 
         void OnKeyDown(KeyDownEvent evt)
@@ -204,7 +185,7 @@ namespace Disguise.RenderStream.Parameters
             {
                 m_CreateParameterListSection.SetDisplay(true);
                 m_ExtraParameterListSection.SetDisplay(false);
-                m_IMGUIContainer.SetDisplay(false);
+                m_TreeView.SetDisplay(false);
 
                 m_ParameterList = null;
                 DestroyTreeView();
@@ -213,17 +194,16 @@ namespace Disguise.RenderStream.Parameters
             {
                 m_CreateParameterListSection.SetDisplay(false);
                 m_ExtraParameterListSection.SetDisplay(false);
-                m_IMGUIContainer.SetDisplay(true);
+                m_TreeView.SetDisplay(true);
 
                 m_ParameterList = lists[0];
-                if (m_TreeView == null)
-                    m_TreeView = new ParameterTreeView(m_ParameterList, m_TreeViewState, this);
+                m_TreeView.SetData(m_ParameterList, this);
             }
             else
             {
                 m_CreateParameterListSection.SetDisplay(false);
                 m_ExtraParameterListSection.SetDisplay(true);
-                m_IMGUIContainer.SetDisplay(false);
+                m_TreeView.SetDisplay(false);
                 
                 m_ParameterList = null;
                 DestroyTreeView();
@@ -309,8 +289,8 @@ namespace Disguise.RenderStream.Parameters
             
         void BindItem(VisualElement element, int index)
         {
-            var button = element as Button;
-            var source = itemsSource[index] as DisguiseParameterList;
+            var button = (Button)element;
+            var source = (DisguiseParameterList)itemsSource[index];
 
             button.text = GetPathInHierarchy(source.gameObject);
             button.userData = source;
@@ -318,8 +298,8 @@ namespace Disguise.RenderStream.Parameters
 
         void OnButtonClicked(EventBase evt)
         {
-            var button = evt.target as Button;
-            var source = button.userData as DisguiseParameterList;
+            var button = (Button)evt.target;
+            var source = (DisguiseParameterList)button.userData;
 
             var go = source.gameObject;
             Selection.activeObject = go;

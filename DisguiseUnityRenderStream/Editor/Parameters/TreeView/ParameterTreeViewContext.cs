@@ -1,6 +1,6 @@
 using System;
-using UnityEditor;
-using UnityEngine;
+using System.Linq;
+using UnityEngine.UIElements;
 
 namespace Disguise.RenderStream.Parameters
 {
@@ -9,58 +9,62 @@ namespace Disguise.RenderStream.Parameters
         /// <summary>
         /// Handle right-click on empty area.
         /// </summary>
-        protected override void ContextClicked()
+        protected override void ContextClickedEmptyArea(DropdownMenu menu)
         {
-            var menu = new GenericMenu();
-            
-            menu.AddItem(new GUIContent(Contents.ContextMenuCreateNewGroup), false, CreateNewGroup);
-            menu.AddItem(new GUIContent(Contents.ContextMenuCreateNewParameter), false, () => CreateNewParameter());
-            
-            menu.ShowAsContext();
-            Event.current.Use();
+            menu.AppendAction(Contents.ContextMenuCreateNewGroup, x => CreateNewGroup());
+            menu.AppendAction(Contents.ContextMenuCreateNewParameter, x => CreateNewParameter());
         }
         
         /// <summary>
         /// Handle right-click on an item.
         /// </summary>
-        protected override void ContextClickedItem(int id)
+        protected override void ContextClicked(DropdownMenu menu)
         {
-            var item = FindItem(id, rootItem);
-            var menu = new GenericMenu();
-        
-            if (item is ParameterGroupTreeViewItem groupItem)
+            var selection = selectedItems.ToList();
+
+            if (selection.Count == 1)
             {
-                menu.AddItem(new GUIContent(Contents.ContextMenuAddNewParameter), false, () => CreateNewParameter(item));
-                if (groupItem.Group.IsDefaultGroup)
-                {
-                    // Disable rename and delete on the default group
-                    menu.AddDisabledItem(new GUIContent(Contents.ContextMenuRename), false);
-                    menu.AddItem(new GUIContent(Contents.ContextMenuDuplicate), false, DuplicateSelection);
-                    menu.AddSeparator(string.Empty);
-                    menu.AddDisabledItem(new GUIContent(Contents.ContextMenuDelete), false);
-                }
-                else
-                {
-                    menu.AddItem(new GUIContent(Contents.ContextMenuRename), false, RenameSelection);
-                    menu.AddItem(new GUIContent(Contents.ContextMenuDuplicate), false, DuplicateSelection);
-                    menu.AddSeparator(string.Empty);
-                    menu.AddItem(new GUIContent(Contents.ContextMenuDelete), false, DeleteSelection);
-                }
+                var item = (ItemData)selection[0];
+                HandleSingleItemContext(menu, item);
             }
-            else if (item is ParameterTreeViewItem)
+            else
             {
-                menu.AddItem(new GUIContent(Contents.ContextMenuRename), false, RenameSelection);
-                menu.AddItem(new GUIContent(Contents.ContextMenuDuplicate), false, DuplicateSelection);
-                menu.AddSeparator(string.Empty);
-                menu.AddItem(new GUIContent(Contents.ContextMenuDelete), false, DeleteSelection);
+                HandleMultipleItemsContext(menu);
+            }
+        }
+
+        void HandleSingleItemContext(DropdownMenu menu, ItemData item)
+        {
+            if (item.Group is { } group)
+            {
+                var disabledIfDefaultGroup = group.IsDefaultGroup
+                    ? DropdownMenuAction.Status.Disabled
+                    : DropdownMenuAction.Status.Normal;
+                
+                menu.AppendAction(Contents.ContextMenuAddNewParameter, x => CreateNewParameter(item));
+                menu.AppendAction(Contents.ContextMenuRename, x => RenameSelection(), disabledIfDefaultGroup);
+                menu.AppendAction(Contents.ContextMenuDuplicate, x => DuplicateSelectedItems());
+                menu.AppendSeparator(string.Empty);
+                menu.AppendAction(Contents.ContextMenuDelete, x => DeleteSelectedItems(), disabledIfDefaultGroup);
+            }
+            else if (item.Parameter is { } parameter)
+            {
+                menu.AppendAction(Contents.ContextMenuRename, x => RenameSelection());
+                menu.AppendAction(Contents.ContextMenuDuplicate, x => DuplicateSelectedItems());
+                menu.AppendSeparator(string.Empty);
+                menu.AppendAction(Contents.ContextMenuDelete, x => DeleteSelectedItems());
             }
             else
             {
                 throw new NotImplementedException();
             }
-            
-            menu.ShowAsContext();
-            Event.current.Use();
+        }
+
+        void HandleMultipleItemsContext(DropdownMenu menu)
+        {
+            menu.AppendAction(Contents.ContextMenuDuplicate, x => DuplicateSelectedItems());
+            menu.AppendSeparator(string.Empty);
+            menu.AppendAction(Contents.ContextMenuDelete, x => DeleteSelectedItems());
         }
     }
 }

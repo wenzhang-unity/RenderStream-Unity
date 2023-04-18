@@ -1,137 +1,103 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
-using UnityEditor.IMGUI.Controls;
-using TreeView = UnityEditor.IMGUI.Controls.TreeView;
+using UnityEngine.UIElements;
 
 namespace Disguise.RenderStream.Parameters
 {
-    partial class ParameterTreeView : TreeView
+    partial class ParameterTreeView : TreeViewExtended
     {
-        enum Columns
+        public class ItemData
         {
-            Name,
-            Object,
-            Component,
-            Property
-        }
-        
-        class ParameterGroupTreeViewItem : TreeViewItem
-        {
-            public ParameterGroup Group { get; private set; }
+            public bool IsGroup => m_Group != null;
+            public bool IsParameter => m_Parameter != null;
+
+            public ParameterGroup Group => m_Group;
+            public Parameter Parameter => m_Parameter;
             
-            public ParameterGroupTreeViewItem(ParameterGroup group, int id, int depth, string displayName) :
-                base(id, depth, displayName)
+            readonly ParameterGroup m_Group;
+            readonly Parameter m_Parameter;
+
+            public ItemData(ParameterGroup group)
             {
-                Group = group;
+                m_Group = group;
+                m_Parameter = default;
             }
-        }
-        
-        class ParameterTreeViewItem : TreeViewItem
-        {
-            public Parameter Parameter { get; private set; }
-            
-            public ParameterTreeViewItem(Parameter parameter, int id, int depth, string displayName) :
-                base(id, depth, displayName)
+
+            public ItemData(Parameter parameter)
             {
-                Parameter = parameter;
+                m_Group = default;
+                m_Parameter = parameter;
             }
         }
 
-        readonly DisguiseParameterList m_ParameterList;
-        readonly ITreeViewStateStorage m_StateStorage;
+        DisguiseParameterList m_ParameterList;
+        ITreeViewStateStorage m_StateStorage;
+        readonly Dictionary<Parameter, ParameterGroup> m_ParameterGroups = new Dictionary<Parameter, ParameterGroup>();
+        string m_SearchString;
 
-        public ParameterTreeView(DisguiseParameterList parameterList, TreeViewState state, ITreeViewStateStorage stateStorage) :
-            base(state)
+        public ParameterTreeView()
+        {
+            Undo.undoRedoPerformed += OnUndoRedoPerformed;
+            SetupSelection();
+            SetupDraw();
+            // SetupDragAndDrop();
+        }
+
+        public void SetData(DisguiseParameterList parameterList, ITreeViewStateStorage stateStorage)
         {
             m_ParameterList = parameterList;
             m_StateStorage = stateStorage;
-            m_PreviousSelection = state.selectedIDs;
 
             InitializeReflectionInfo();
-            
-            showAlternatingRowBackgrounds = true;
-            this.DeselectOnUnhandledMouseDown(true);
-            
-            Undo.undoRedoPerformed += OnUndoRedoPerformed;
-            Undo.undoRedoPerformed += InitializeReflectionInfo;
-            DragAndDrop.AddDropHandler(SceneDropHandler);
-            
-            rowHeight = 20;
-            customFoldoutYOffset = (20 - EditorGUIUtility.singleLineHeight) * 0.5f;
-            extraSpaceBeforeIconAndLabel = 18;
 
-            var multiColumnHeaderState = new MultiColumnHeaderState(new[]
-            {
-                new MultiColumnHeaderState.Column()
-                {
-                    headerContent = Contents.NameColumnHeader,
-                    width = 120f,
-                    minWidth = 120f,
-                    canSort = false,
-                    allowToggleVisibility = false
-                },
-                new MultiColumnHeaderState.Column()
-                {
-                    headerContent = Contents.ObjectColumnHeader,
-                    width = 100f,
-                    minWidth = 60f,
-                    canSort = false,
-                    allowToggleVisibility = false
-                },
-                new MultiColumnHeaderState.Column()
-                {
-                    headerContent = Contents.ComponentColumnHeader,
-                    width = 100f,
-                    minWidth = 60f,
-                    canSort = false,
-                    allowToggleVisibility = false
-                },
-                new MultiColumnHeaderState.Column()
-                {
-                    headerContent = Contents.PropertyColumnHeader,
-                    width = 100f,
-                    minWidth = 60f,
-                    canSort = false,
-                    allowToggleVisibility = false
-                }
-            });
+            var rootItems = GenerateDataTree();
+            SetRootItems(rootItems);
             
-            multiColumnHeader = new MultiColumnHeader(multiColumnHeaderState)
-            {
-                canSort = false,
-                height = MultiColumnHeader.DefaultGUI.minimumHeight
-            };
-            multiColumnHeader.ResizeToFit();
-            
-            Reload();
+            Rebuild();
         }
 
         public void Destroy()
         {
             Undo.undoRedoPerformed -= OnUndoRedoPerformed;
-            Undo.undoRedoPerformed -= InitializeReflectionInfo;
-            DragAndDrop.RemoveDropHandler(SceneDropHandler);
+            // DragAndDrop.RemoveDropHandler(SceneDropHandler); (ShutdownDragAndDrop();
         }
         
-        protected override TreeViewItem BuildRoot()
+        List<TreeViewItemData<ItemData>> GenerateDataTree()
         {
-            var root = new TreeViewItem { id = 0, depth = -1, displayName = "Root" };
-            var allItems = new List<TreeViewItem>();
+            m_ParameterGroups.Clear();
+            
+            var allItems = new List<TreeViewItemData<ItemData>>();
 
             foreach (var group in m_ParameterList.m_Groups)
             {
-                allItems.Add(new ParameterGroupTreeViewItem(group, group.ID, 0, group.UnityDisplayName));
+                var groupItemData = new ItemData(group);
+                var groupMatchesSearch = !HasSearch || MatchesSearch(groupItemData, SearchString);
+                
+                var childItems = new List<TreeViewItemData<ItemData>>();
 
                 foreach (var parameter in group.m_Parameters)
                 {
-                    allItems.Add(new ParameterTreeViewItem(parameter, parameter.ID, 1, parameter.Name));
+                    var parameterItemData = new ItemData(parameter);
+                    if (HasSearch && !MatchesSearch(parameterItemData, SearchString))
+                        continue;
+
+                    groupMatchesSearch = true;
+                    var parameterItem = new TreeViewItemData<ItemData>(parameter.ID, parameterItemData);
+                    childItems.Add(parameterItem);
+                    
+                    m_ParameterGroups.Add(parameter, group);
+                }
+
+                if (groupMatchesSearch)
+                {
+                    var groupItem = new TreeViewItemData<ItemData>(group.ID, groupItemData, childItems);
+                    allItems.Add(groupItem);
                 }
             }
 
-            SetupParentsAndChildrenFromDepths(root, allItems);
-
-            return root;
+            return allItems;
         }
 
         void InitializeReflectionInfo()
@@ -144,20 +110,20 @@ namespace Disguise.RenderStream.Parameters
                 }
             }
         }
-        
-        ParameterGroup GetGroupOfParameterItem(ParameterTreeViewItem item)
-        {
-            if (item.parent is ParameterGroupTreeViewItem groupItem)
-            {
-                return groupItem.Group;
-            }
-        
-            throw new InvalidOperationException();
-        }
 
         void RegisterUndo(string message)
         {
             Undo.RegisterCompleteObjectUndo(m_ParameterList, message);
+        }
+
+        void RebuildAfterUndoRedo()
+        {
+            SetData(m_ParameterList, m_StateStorage);
+        }
+        
+        ParameterGroup GetGroupOfParameter(Parameter parameter)
+        {
+            return m_ParameterGroups[parameter];
         }
 
         public void CreateNewGroup()
@@ -173,7 +139,7 @@ namespace Disguise.RenderStream.Parameters
             
             m_ParameterList.m_Groups.Add(newGroup);
             
-            Reload();
+            AddGroupToTree(newGroup);
             
             SelectRevealAndFrame(new []{ newGroup.ID });
         }
@@ -185,28 +151,28 @@ namespace Disguise.RenderStream.Parameters
         /// If the current selection is empty, a new group will be automatically created.
         /// </summary>
         /// <param name="selectionOverride">Specifies an item to treat as the current selection instead of the current UI selection.</param>
-        public void CreateNewParameter(TreeViewItem selectionOverride = null)
+        public void CreateNewParameter(ItemData selectionOverride = null)
         {
             RegisterSelectionUndoRedo();
             RegisterUndo(Contents.UndoCreateNewParameter);
             
             ParameterGroup targetGroup;
 
-            if (!HasSelection() && selectionOverride == null)
+            if (!HasSelection() && selectionOverride != null)
             {
                 targetGroup = m_ParameterList.DefaultGroup;
             }
             else
             {
-                var item = selectionOverride ?? FindItem(GetSelection()[0], rootItem);
+                var item = selectionOverride ?? (ItemData)selectedItem;
                 
-                if (item is ParameterGroupTreeViewItem selectedGroupItem)
+                if (item.Group is { } selectedGroup)
                 {
-                    targetGroup = selectedGroupItem.Group;
+                    targetGroup = selectedGroup;
                 }
-                else if (item is ParameterTreeViewItem selectedParameterItem)
+                else if (item.Parameter is { } selectedParameter)
                 {
-                    var parentGroup = GetGroupOfParameterItem(selectedParameterItem);
+                    var parentGroup = GetGroupOfParameter(selectedParameter);
                     targetGroup = parentGroup;
                 }
                 else
@@ -214,7 +180,7 @@ namespace Disguise.RenderStream.Parameters
                     throw new NotImplementedException();
                 }
             }
-
+        
             var newParameter = new Parameter
             {
                 Name = GetUniqueParameterName(Contents.NewParameterName, targetGroup),
@@ -223,31 +189,12 @@ namespace Disguise.RenderStream.Parameters
             
             targetGroup.m_Parameters.Add(newParameter);
             
-            Reload();
+            AddParameterToTree(newParameter, targetGroup);
             
-            SelectRevealAndFrame(new []{ newParameter.ID });
+            schedule.Execute(() => SelectRevealAndFrame(new []{ newParameter.ID }));
         }
 
-        void DeleteItem(TreeViewItem item)
-        {
-            if (item is ParameterGroupTreeViewItem groupItem)
-            {
-                // Cannot delete the default group
-                if (groupItem.Group != m_ParameterList.DefaultGroup)
-                    m_ParameterList.m_Groups.Remove(groupItem.Group);
-            }
-            else if (item is ParameterTreeViewItem parameterItem)
-            {
-                var parameterGroup = GetGroupOfParameterItem(parameterItem);
-                parameterGroup.m_Parameters.Remove(parameterItem.Parameter);
-            }
-            else
-            {
-                throw new NotImplementedException();
-            }
-        }
-        
-        void DeleteSelection()
+        protected override void DeleteSelectedItems()
         {
             if (!HasSelection())
                 return;
@@ -255,37 +202,80 @@ namespace Disguise.RenderStream.Parameters
             RegisterSelectionUndoRedo();
             RegisterUndo(Contents.UndoDeleteParameter);
             
-            foreach (var item in FindRows(GetSelection()))
-                DeleteItem(item);
+            var toDelete = selectedItems.ToList();
             
-            SelectRevealAndFrame(Array.Empty<int>());
+            foreach (var item in toDelete)
+            {
+                var itemData = (ItemData)item;
+
+                if (itemData.Group is { } group)
+                {
+                    // Cannot delete the default group
+                    if (group != m_ParameterList.DefaultGroup)
+                    {
+                        m_ParameterList.m_Groups.Remove(group);
+                        TryRemoveItem(group.ID);
+                    }
+                }
+                else if (itemData.Parameter is { } parameter)
+                {
+                    var parameterGroup = GetGroupOfParameter(parameter);
+                    parameterGroup.m_Parameters.Remove(parameter);
+                    TryRemoveItem(parameter.ID);
+                }
+            }
+        }
+
+        protected override void DuplicateSelectedItems()
+        {
+            if (!HasSelection())
+                return;
             
-            Reload();
+            RegisterSelectionUndoRedo();
+            RegisterUndo(Contents.UndoDuplicateParameter);
+            
+            var selection = selectedItems.ToList();
+            var newSelection = new int[selection.Count];
+            var i = 0;
+            
+            foreach (var item in selection)
+            {
+                var itemData = (ItemData)item;
+                DuplicateItem(itemData, out newSelection[i++]);
+            }
+            
+            SelectRevealAndFrame(newSelection);
         }
         
-        void DuplicateItem(TreeViewItem item, out int duplicateID)
+        void DuplicateItem(ItemData item, out int duplicateID)
         {
-            if (item is ParameterGroupTreeViewItem groupItem)
+            if (item.Group is { } group)
             {
-                var clone = groupItem.Group.Clone();
+                var clone = group.Clone();
                 clone.Name = GetUniqueGroupName(clone.Name);
                 clone.ID = m_ParameterList.ReserveID();
                 m_ParameterList.m_Groups.Add(clone);
                 duplicateID = clone.ID;
-
+                
+                AddGroupToTree(clone);
+        
                 foreach (var cloneParameter in clone.m_Parameters)
                 {
                     cloneParameter.ID = m_ParameterList.ReserveID();
+                    
+                    AddParameterToTree(cloneParameter, clone);
                 }
             }
-            else if (item is ParameterTreeViewItem parameterItem)
+            else if (item.Parameter is { } parameter)
             {
-                var parameterGroup = GetGroupOfParameterItem(parameterItem);
-                var clone = parameterItem.Parameter.Clone();
+                var parameterGroup = GetGroupOfParameter(parameter);
+                var clone = parameter.Clone();
                 clone.Name = GetUniqueParameterName(clone.Name, parameterGroup);
                 clone.ID = m_ParameterList.ReserveID();
                 parameterGroup.m_Parameters.Add(clone);
                 duplicateID = clone.ID;
+                
+                AddParameterToTree(clone, parameterGroup);
             }
             else
             {
@@ -293,33 +283,53 @@ namespace Disguise.RenderStream.Parameters
             }
         }
         
-        void DuplicateSelection()
+        void AddGroupToTree(ParameterGroup group)
         {
-            if (!HasSelection())
-                return;
-
-            RegisterSelectionUndoRedo();
-            RegisterUndo(Contents.UndoDuplicateParameter);
-
-            var selection = GetSelection();
-            var newSelection = new int[selection.Count];
-            var i = 0;
-
-            foreach (var item in FindRows(selection))
+            var item = new TreeViewItemData<ItemData>(group.ID, new ItemData(group));
+            AddItem(item);
+        }
+        
+        void AddParameterToTree(Parameter parameter, ParameterGroup group)
+        {
+            var item = new TreeViewItemData<ItemData>(parameter.ID, new ItemData(parameter));
+            AddItem(item, group.ID);
+        }
+        
+        /// <summary>
+        /// Imitates IMGUI's TreeViewControl.searchString
+        /// </summary>
+        public string SearchString
+        {
+            get => m_SearchString;
+            set
             {
-                DuplicateItem(item, out newSelection[i++]);
+                if (m_SearchString != value)
+                {
+                    m_SearchString = value;
+                    
+                    RebuildAfterUndoRedo();
+                }
             }
-            
-            Reload();
-            
-            SelectRevealAndFrame(newSelection);
         }
 
-        void RenameSelection()
+        /// <summary>
+        /// Imitates IMGUI's TreeViewControl.hasSearch
+        /// </summary>
+        public bool HasSearch => !string.IsNullOrWhiteSpace(m_SearchString);
+
+        /// <summary>
+        /// Imitates IMGUI's TreeViewControl.searchString behavior
+        /// </summary>
+        bool MatchesSearch(ItemData item, string searchString)
         {
-            var firstID = GetSelection()[0];
-            var firstItem = FindItem(firstID, rootItem);
-            BeginRename(firstItem);
+            var itemName = item switch
+            {
+                { IsGroup: true } => item.Group.Name,
+                { IsParameter: true } => item.Parameter.Name,
+                _ => throw new NotSupportedException()
+            };
+            
+            return itemName.IndexOf(searchString, StringComparison.OrdinalIgnoreCase) >= 0;
         }
     }
 }
