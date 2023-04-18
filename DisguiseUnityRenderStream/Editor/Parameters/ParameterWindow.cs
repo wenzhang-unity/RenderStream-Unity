@@ -72,20 +72,6 @@ namespace Disguise.RenderStream.Parameters
             EditorSceneManager.activeSceneChangedInEditMode -= OnSceneLoaded;
         }
 
-        void OnDestroy()
-        {
-            DestroyTreeView();
-        }
-
-        void DestroyTreeView()
-        {
-            if (m_TreeView != null)
-            {
-                m_TreeView.Destroy();
-                m_TreeView = null;
-            }
-        }
-
         void CreateGUI()
         {
             m_Layout.CloneTree(rootVisualElement);
@@ -188,7 +174,6 @@ namespace Disguise.RenderStream.Parameters
                 m_TreeView.SetDisplay(false);
 
                 m_ParameterList = null;
-                DestroyTreeView();
             }
             else if (lists.Length == 1)
             {
@@ -196,8 +181,12 @@ namespace Disguise.RenderStream.Parameters
                 m_ExtraParameterListSection.SetDisplay(false);
                 m_TreeView.SetDisplay(true);
 
-                m_ParameterList = lists[0];
-                m_TreeView.SetData(m_ParameterList, this);
+                var newParameterList = lists[0];
+                if (m_ParameterList != newParameterList)
+                {
+                    m_TreeView.SetData(newParameterList, this);
+                    m_ParameterList = newParameterList;
+                }
             }
             else
             {
@@ -206,7 +195,6 @@ namespace Disguise.RenderStream.Parameters
                 m_TreeView.SetDisplay(false);
                 
                 m_ParameterList = null;
-                DestroyTreeView();
 
                 m_ExtraParameterListNames.itemsSource = lists;
             }
@@ -228,7 +216,6 @@ namespace Disguise.RenderStream.Parameters
 
         void OnSceneLoaded(Scene oldScene, Scene newScene)
         {
-            DestroyTreeView();
             PollScene();
         }
 

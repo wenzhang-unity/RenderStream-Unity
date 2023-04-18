@@ -39,10 +39,19 @@ namespace Disguise.RenderStream.Parameters
 
         public ParameterTreeView()
         {
-            Undo.undoRedoPerformed += OnUndoRedoPerformed;
             SetupSelection();
             SetupDraw();
             // SetupDragAndDrop();
+            
+            RegisterCallback<AttachToPanelEvent>(x =>
+            {
+                Undo.undoRedoPerformed += OnUndoRedoPerformed;
+            });
+            
+            RegisterCallback<DetachFromPanelEvent>(x =>
+            {
+                Undo.undoRedoPerformed -= OnUndoRedoPerformed;
+            });
         }
 
         public void SetData(DisguiseParameterList parameterList, ITreeViewStateStorage stateStorage)
@@ -56,12 +65,6 @@ namespace Disguise.RenderStream.Parameters
             SetRootItems(rootItems);
             
             Rebuild();
-        }
-
-        public void Destroy()
-        {
-            Undo.undoRedoPerformed -= OnUndoRedoPerformed;
-            // DragAndDrop.RemoveDropHandler(SceneDropHandler); (ShutdownDragAndDrop();
         }
         
         List<TreeViewItemData<ItemData>> GenerateDataTree()
