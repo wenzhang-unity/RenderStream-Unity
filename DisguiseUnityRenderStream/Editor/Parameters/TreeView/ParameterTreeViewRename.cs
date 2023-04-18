@@ -14,6 +14,10 @@ namespace Disguise.RenderStream.Parameters
         
         protected override bool CanRename(int index)
         {
+            // The same click event that starts a drag and drop operation can start a rename operation, cancel the rename
+            if (m_IsReorderingItems)
+                return false;
+            
             var item = GetItemDataForIndex<ItemData>(index);
             
             // Cannot rename the default group
@@ -22,11 +26,9 @@ namespace Disguise.RenderStream.Parameters
 
         protected override void RenameEnded(int id, bool canceled = false)
         {
-            var index = viewController.GetIndexForId(id);
-            
             if (canceled)
             {
-                RefreshItem(index);
+                RefreshItemById(id);
                 return;
             }
 
@@ -39,13 +41,13 @@ namespace Disguise.RenderStream.Parameters
             {
                 if (group.Name == newName)
                 {
-                    RefreshItem(index);
+                    RefreshItemById(id);
                     return;
                 }
 
                 if (string.IsNullOrWhiteSpace(newName))
                 {
-                    RefreshItem(index);
+                    RefreshItemById(id);
                     return;
                 }
 
@@ -57,7 +59,7 @@ namespace Disguise.RenderStream.Parameters
             {
                 if (parameter.Name == newName)
                 {
-                    RefreshItem(index);
+                    RefreshItemById(id);
                     return;
                 }
 
@@ -84,7 +86,7 @@ namespace Disguise.RenderStream.Parameters
                 throw new NotImplementedException();
             }
             
-            RefreshItem(index);
+            RefreshItemById(id);
         }
         
         protected override string GetItemTextForIndex(int index)

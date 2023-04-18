@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -22,11 +21,15 @@ namespace Disguise.RenderStream.Parameters
         void SetupDragAndDropOnAttach()
         {
             DragAndDrop.AddDropHandler(SceneDropHandler);
+            
+            RegisterCallback<DragExitedEvent>(OnDragExited);
         }
 
         void ShutdownDragAndDropOnDetach()
         {
             DragAndDrop.RemoveDropHandler(SceneDropHandler);
+            
+            UnregisterCallback<DragExitedEvent>(OnDragExited);
         }
         
         /// <summary>
@@ -36,8 +39,8 @@ namespace Disguise.RenderStream.Parameters
         {
             var data = DragAndDrop.GetGenericData(Contents.DragDataKey);
             
-            if (data is IList<object> { Count: 1 } dataList &&
-                dataList[0] is Parameter { Object: GameObject gameObject })
+            if (data is ItemData[] { Length: 1 } dataList &&
+                dataList[0].Parameter is { Object: GameObject gameObject })
             {
                 if (perform)
                 {
@@ -53,49 +56,26 @@ namespace Disguise.RenderStream.Parameters
         }
         
         /// <summary>
-        /// Prevents drag & drop when the default group is selected.
-        /// </summary>
-        bool CanStartDrag(CanStartDragArgs args)
-        {
-            foreach (var item in selectedItems.Cast<ItemData>())
-            {
-                // Cannot re-order the default group
-                if (item is { Group: { IsDefaultGroup: true } })
-                    return false;
-            }
-
-            return true;
-        }
-        
-        StartDragArgs SetupDragAndDrop(SetupDragAndDropArgs args)
-        {
-            DragAndDrop.PrepareStartDrag();
-
-            var selection = args.selectedIds.Select(GetItemDataForId<ItemData>).Where(x => x != null);
-
-            var genericData = selection.Select(new Func<ItemData, object>(x =>
-            {
-                if (x.Group is { } group)
-                    return group;
-                else if (x.Parameter is { } parameter)
-                    return parameter;
-                else
-                    throw new NotSupportedException();
-            }));
-
-            var startArgs = new StartDragArgs(Contents.DragTitle, DragVisualMode.Move);
-            startArgs.SetGenericData(Contents.DragDataKey, genericData.ToArray());
-            return startArgs;
-        }
-        
-        /// <summary>
         /// Receives drag & drop objects, which may originate from any Unity window, while they're being dragged.
         /// </summary>
         DragVisualMode DragAndDropUpdate(HandleDragAndDropArgs args)
         {
-            if (DragAndDrop.objectReferences.Length == 0)
+            if (DragAndDrop.objectReferences.Length > 0)
+            {
+                return DragAndDropUpdateExternal(args);
+            }
+            else if (DragAndDrop.GetGenericData(Contents.DragDataKey) is ItemData[] dataList)
+            {
+                return DragAndDropUpdateReorder(args, dataList);
+            }
+            else
+            {
                 return DragVisualMode.Rejected;
-            
+            }
+        }
+
+        DragVisualMode DragAndDropUpdateExternal(HandleDragAndDropArgs args)
+        {
             switch (args.dropPosition)
             {
                 case DragAndDropPosition.OverItem:
@@ -127,11 +107,33 @@ namespace Disguise.RenderStream.Parameters
         /// </summary>
         DragVisualMode HandleDrop(HandleDragAndDropArgs args)
         {
-            if (DragAndDrop.objectReferences.Length == 0)
-                return DragVisualMode.Rejected;
-            
             int[] newSelection;
+            DragVisualMode mode;
 
+            if (DragAndDrop.objectReferences.Length > 0)
+            {
+                mode = HandleDropExternal(args, out newSelection);
+            }
+            else if (DragAndDrop.GetGenericData(Contents.DragDataKey) is ItemData[] dataList)
+            {
+                return HandleDropReorder(args, dataList, out newSelection);
+            }
+            else
+            {
+                return DragVisualMode.Rejected;
+            }
+
+            if (newSelection is { Length: > 0 })
+            {
+                RegisterSelectionUndoRedo();
+                SelectRevealAndFrame(newSelection);
+            }
+            
+            return mode;
+        }
+        
+        DragVisualMode HandleDropExternal(HandleDragAndDropArgs args, out int[] newSelection)
+        {
             DragVisualMode mode = args.dropPosition switch
             {
                 DragAndDropPosition.OverItem => DragAndDropOntoItem(args, out newSelection),
@@ -139,12 +141,6 @@ namespace Disguise.RenderStream.Parameters
                 DragAndDropPosition.OutsideItems => DragAndDropOutsideItems(args, out newSelection),
                 _ => throw new ArgumentOutOfRangeException()
             };
-
-            if (newSelection is { Length: > 0 })
-            {
-                RegisterSelectionUndoRedo();
-                SelectRevealAndFrame(newSelection);
-            }
             
             return mode;
         }
@@ -176,8 +172,7 @@ namespace Disguise.RenderStream.Parameters
                     AssignGenericObjectToParameter(parameter, firstObject);
                     newSelection = new[] { parameter.ID };
                     
-                    var index = viewController.GetIndexForId(parameter.ID);
-                    RefreshItem(index);
+                    RefreshItemById(parameter.ID);
                     
                     return DragVisualMode.Move;
                 }

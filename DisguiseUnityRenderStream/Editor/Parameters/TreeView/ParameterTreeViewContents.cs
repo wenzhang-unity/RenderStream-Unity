@@ -19,6 +19,7 @@ namespace Disguise.RenderStream.Parameters
             public static readonly string UndoAssignProperty = L10n.Tr("Assigned property to parameter");
             public static readonly string UndoDragAndDropNewParameters = L10n.Tr("Drag and drop new parameters");
             public static readonly string UndoDragAndDropAssignParameters = L10n.Tr("Drag and drop assign parameters");
+            public static readonly string UndoDragAndDropReorderParameters = L10n.Tr("Drag and drop reorder parameters");
 
             public static readonly string NameColumnHeader = L10n.Tr("Name");
             public static readonly string ObjectColumnHeader = L10n.Tr("Object");

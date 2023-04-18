@@ -288,16 +288,24 @@ namespace Disguise.RenderStream.Parameters
             }
         }
         
-        void AddGroupToTree(ParameterGroup group)
+        void AddGroupToTree(ParameterGroup group, int childIndex = -1)
         {
             var item = new TreeViewItemData<ItemData>(group.ID, new ItemData(group));
-            AddItem(item);
+            AddItem(item, -1, childIndex);
         }
         
         void AddParameterToTree(Parameter parameter, ParameterGroup group, int groupChildIndex = -1)
         {
+            m_ParameterGroups[parameter] = group;
+            
             var item = new TreeViewItemData<ItemData>(parameter.ID, new ItemData(parameter));
             AddItem(item, group.ID, groupChildIndex);
+        }
+
+        void RefreshItemById(int id)
+        {
+            var index = viewController.GetIndexForId(id);
+            RefreshItem(index);
         }
         
         /// <summary>

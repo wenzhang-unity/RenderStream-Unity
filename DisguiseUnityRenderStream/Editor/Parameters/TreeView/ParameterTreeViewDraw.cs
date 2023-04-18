@@ -244,6 +244,8 @@ namespace Disguise.RenderStream.Parameters
                     m_TreeView.RegisterUndo(Contents.UndoAssignObject);
                     m_Parameter.Object = value;
                 }
+                
+                m_TreeView.RefreshItemById(m_Parameter.ID);
             }
         }
         
@@ -461,6 +463,7 @@ namespace Disguise.RenderStream.Parameters
                         }
                         
                         UpdateDisplay();
+                        m_TreeView.RefreshItemById(m_Parameter.ID);
                     });
                 }
                 
@@ -537,6 +540,7 @@ namespace Disguise.RenderStream.Parameters
                         }
                         
                         UpdateDisplay();
+                        m_TreeView.RefreshItemById(m_Parameter.ID);
                     });
                 }
                 
@@ -580,24 +584,6 @@ namespace Disguise.RenderStream.Parameters
                 stretchable = true;
             }
         }
-        
-        // protected override Rect GetRenameRect(Rect rowRect, int row, TreeViewItem item)
-        // {
-        //     if (item is ParameterGroupTreeViewItem)
-        //     {
-        //         return base.GetRenameRect(rowRect, row, item);
-        //     }
-        //     else if (item is ParameterTreeViewItem)
-        //     {
-        //         var cellRect = GetCellRectForTreeFoldouts(rowRect);
-        //         CenterRectUsingSingleLineHeight(ref cellRect);
-        //         return base.GetRenameRect(cellRect, row, item);
-        //     }
-        //     else
-        //     {
-        //         throw new NotImplementedException();
-        //     }
-        // }
         
         static Texture ResolveComponentIcon(Component component, Texture noneIcon, Texture fallbackIcon)
         {

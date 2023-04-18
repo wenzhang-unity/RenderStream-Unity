@@ -199,8 +199,17 @@ namespace Disguise.RenderStream.Parameters
             if (label == null)
                 return;
 
-            m_ScheduledItem = schedule.Execute(label.BeginRename);
+            m_ScheduledItem = schedule.Execute(() => BeginRenameAsync(index, label));
             m_ScheduledItem.ExecuteLater(delayMs);
+        }
+
+        void BeginRenameAsync(int index, RenameableLabel label)
+        {
+            // Perform an additional check since we last saw this label
+            if (!CanRename(index))
+                return;
+
+            label.BeginRename();
         }
 
         /// <summary>
