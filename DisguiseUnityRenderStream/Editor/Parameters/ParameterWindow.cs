@@ -61,6 +61,7 @@ namespace Disguise.RenderStream.Parameters
         VisualElement m_ExtraParameterListSection;
         ExtraInstanceListView m_ExtraParameterListNames;
         ParameterTreeView m_TreeView;
+        IVisualElementScheduledItem m_ScheduledPoll;
 
         void OnEnable()
         {
@@ -109,7 +110,21 @@ namespace Disguise.RenderStream.Parameters
             m_GUICreated = true;
 
             PollScene();
-            rootVisualElement.schedule.Execute(PollScene).Every(250);
+            
+            if (rootVisualElement.panel != null)
+                OnAttachToPanel(); 
+            rootVisualElement.RegisterCallback<AttachToPanelEvent>(_ => OnAttachToPanel());
+            rootVisualElement.RegisterCallback<DetachFromPanelEvent>(_ => OnDetachFromPanel());
+        }
+
+        void OnAttachToPanel()
+        {
+            m_ScheduledPoll = rootVisualElement.schedule.Execute(PollScene).Every(250);
+        }
+
+        void OnDetachFromPanel()
+        {
+            m_ScheduledPoll.Pause();
         }
         
         void CreateNewGroup()
@@ -182,7 +197,7 @@ namespace Disguise.RenderStream.Parameters
                 m_TreeView.SetDisplay(true);
 
                 var newParameterList = lists[0];
-                if (m_ParameterList != newParameterList)
+                if (m_ParameterList != newParameterList || m_TreeView.itemsSource == null)
                 {
                     m_TreeView.SetData(newParameterList, this);
                     m_ParameterList = newParameterList;

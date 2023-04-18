@@ -41,16 +41,18 @@ namespace Disguise.RenderStream.Parameters
         {
             SetupSelection();
             SetupDraw();
-            // SetupDragAndDrop();
+            SetupDragAndDrop();
             
             RegisterCallback<AttachToPanelEvent>(x =>
             {
                 Undo.undoRedoPerformed += OnUndoRedoPerformed;
+                SetupDragAndDropOnAttach();
             });
             
             RegisterCallback<DetachFromPanelEvent>(x =>
             {
                 Undo.undoRedoPerformed -= OnUndoRedoPerformed;
+                ShutdownDragAndDropOnDetach();
             });
         }
 
@@ -292,10 +294,10 @@ namespace Disguise.RenderStream.Parameters
             AddItem(item);
         }
         
-        void AddParameterToTree(Parameter parameter, ParameterGroup group)
+        void AddParameterToTree(Parameter parameter, ParameterGroup group, int groupChildIndex = -1)
         {
             var item = new TreeViewItemData<ItemData>(parameter.ID, new ItemData(parameter));
-            AddItem(item, group.ID);
+            AddItem(item, group.ID, groupChildIndex);
         }
         
         /// <summary>
