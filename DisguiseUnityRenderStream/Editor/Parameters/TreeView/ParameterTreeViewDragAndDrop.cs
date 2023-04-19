@@ -47,6 +47,7 @@ namespace Disguise.RenderStream.Parameters
         {
             var data = DragAndDrop.GetGenericData(Contents.DragDataKey);
             
+            // Are we dragging exactly one parameter item with an assigned GameObject?
             if (data is ItemData[] { Length: 1 } dataList &&
                 dataList[0].Parameter is { Object: GameObject gameObject })
             {
@@ -69,10 +70,12 @@ namespace Disguise.RenderStream.Parameters
         {
             if (DragAndDrop.objectReferences.Length > 0)
             {
+                // Are we dragging Unity objects from other windows?
                 return DragAndDropUpdateExternal(args);
             }
             else if (DragAndDrop.GetGenericData(Contents.DragDataKey) is ItemData[] dataList)
             {
+                // Are we dragging items from this tree?
                 return DragAndDropUpdateReorder(args, dataList);
             }
             else
@@ -81,6 +84,9 @@ namespace Disguise.RenderStream.Parameters
             }
         }
 
+        /// <summary>
+        /// Called while objects from other windows are being dragged inside this tree.
+        /// </summary>
         DragVisualMode DragAndDropUpdateExternal(HandleDragAndDropArgs args)
         {
             switch (args.dropPosition)
@@ -93,16 +99,16 @@ namespace Disguise.RenderStream.Parameters
                     
                     return parentItem switch
                     {
-                        { IsGroup: true } => DragVisualMode.Copy,
-                        { IsParameter: true } => rejectIfMany,
+                        { IsGroup: true } => DragVisualMode.Copy,   // Can always drop on a group
+                        { IsParameter: true } => rejectIfMany,      // Can only assign a single object to a parameter
                         _ => throw new NotSupportedException()
                     };
             
                 case DragAndDropPosition.BetweenItems:
-                    return DragVisualMode.Copy;
+                    return DragVisualMode.Copy; // Can always drop between groups and parameters
             
                 case DragAndDropPosition.OutsideItems:
-                    return DragVisualMode.Copy;
+                    return DragVisualMode.Copy; // Can always drop on an empty area
             
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -119,10 +125,12 @@ namespace Disguise.RenderStream.Parameters
 
             if (DragAndDrop.objectReferences.Length > 0)
             {
+                // Are we dragging Unity objects from other windows?
                 mode = HandleDropExternal(args, out newSelection);
             }
             else if (DragAndDrop.GetGenericData(Contents.DragDataKey) is ItemData[] dataList)
             {
+                // Are we dragging items from this tree?
                 return HandleDropReorder(args, dataList, out newSelection);
             }
             else
@@ -138,6 +146,9 @@ namespace Disguise.RenderStream.Parameters
             return mode;
         }
         
+        /// <summary>
+        /// Called when objects from other windows are dropped onto this tree.
+        /// </summary>
         DragVisualMode HandleDropExternal(HandleDragAndDropArgs args, out int[] newSelection)
         {
             DragVisualMode mode = args.dropPosition switch
@@ -157,6 +168,8 @@ namespace Disguise.RenderStream.Parameters
             
             if (parentItem.Group is { } group)
             {
+                // Append new parameter(s) to group
+                
                 RegisterUndo(Contents.UndoDragAndDropAssignParameters);
 
                 newSelection = new int[DragAndDrop.objectReferences.Length];
@@ -172,6 +185,8 @@ namespace Disguise.RenderStream.Parameters
             {
                 if (DragAndDrop.objectReferences.Length == 1)
                 {
+                    // Assign single object to single parameter
+                    
                     RegisterUndo(Contents.UndoDragAndDropAssignParameters);
                     
                     var firstObject = DragAndDrop.objectReferences[0];
@@ -198,6 +213,8 @@ namespace Disguise.RenderStream.Parameters
             
             if (parentItem == null)
             {
+                // Create new parameter(s) and a new group (at insertion index) to contain them
+                
                 RegisterUndo(Contents.UndoDragAndDropNewParameters);
                 
                 var newGroup = new ParameterGroup
@@ -217,6 +234,8 @@ namespace Disguise.RenderStream.Parameters
             }
             else if (parentItem.Group is { } group)
             {
+                // Create new parameter(s) and insert them into an existing group
+                
                 RegisterUndo(Contents.UndoDragAndDropNewParameters);
                 
                 var insertAtIndex = args.childIndex;
@@ -238,6 +257,8 @@ namespace Disguise.RenderStream.Parameters
 
         DragVisualMode DragAndDropOutsideItems(HandleDragAndDropArgs args, out int[] newSelection)
         {
+            // Create new parameter(s) and a new group (at the end of the group list) to contain them
+            
             RegisterUndo(Contents.UndoDragAndDropNewParameters);
 
             var newGroup = new ParameterGroup

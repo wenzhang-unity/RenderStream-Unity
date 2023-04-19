@@ -28,14 +28,33 @@ namespace Disguise.RenderStream.Parameters
             return item is not { Group: { IsDefaultGroup: true } };
         }
 
+        /// <summary>
+        /// Ensures an item is refreshed when leaving a block of code.
+        /// </summary>
+        readonly struct RefreshItemScope : IDisposable
+        {
+            readonly ParameterTreeView m_TreeView;
+            readonly int m_ItemID;
+            
+            public RefreshItemScope(ParameterTreeView treeView, int itemID)
+            {
+                m_TreeView = treeView;
+                m_ItemID = itemID;
+            }
+            
+            public void Dispose()
+            {
+                m_TreeView.RefreshItemById(m_ItemID);
+            }
+        }
+
         /// <inheritdoc/>
         protected override void RenameEnded(int id, bool canceled = false)
         {
+            using var refreshItemScope = new RefreshItemScope(this, id);
+
             if (canceled)
-            {
-                RefreshItemById(id);
                 return;
-            }
 
             var root = GetRootElementForId(id);
             var label = root.Q<RenameableLabel>();
@@ -45,16 +64,10 @@ namespace Disguise.RenderStream.Parameters
             if (item.Group is { } group)
             {
                 if (group.Name == newName)
-                {
-                    RefreshItemById(id);
                     return;
-                }
 
                 if (string.IsNullOrWhiteSpace(newName))
-                {
-                    RefreshItemById(id);
                     return;
-                }
 
                 RegisterUndo(Contents.UndoRenameParameter);
                 
@@ -63,10 +76,7 @@ namespace Disguise.RenderStream.Parameters
             else if (item.Parameter is { } parameter)
             {
                 if (parameter.Name == newName)
-                {
-                    RefreshItemById(id);
                     return;
-                }
 
                 // Auto-name
                 if (string.IsNullOrEmpty(newName) && parameter.m_HasCustomName)
@@ -90,8 +100,6 @@ namespace Disguise.RenderStream.Parameters
             {
                 throw new NotImplementedException();
             }
-            
-            RefreshItemById(id);
         }
         
         /// <inheritdoc/>

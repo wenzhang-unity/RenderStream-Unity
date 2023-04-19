@@ -10,6 +10,7 @@ namespace Disguise.RenderStream.Parameters
         /// </summary>
         static class Contents
         {
+            public static readonly string UndoChangeSelection = L10n.Tr("Change parameter selection");
             public static readonly string UndoToggleEnableParameterGroup = L10n.Tr("Toggle parameter group enabled");
             public static readonly string UndoToggleEnableParameter = L10n.Tr("Toggle parameter enabled");
             public static readonly string UndoRenameParameter = L10n.Tr("Rename parameter");
@@ -52,6 +53,7 @@ namespace Disguise.RenderStream.Parameters
                 {
                     if (s_GameObjectIcon == null)
                     {
+                        // Needs deferred creation
                         s_GameObjectIcon = EditorGUIUtility.ObjectContent(null, typeof(GameObject)).image;
                     }
                 

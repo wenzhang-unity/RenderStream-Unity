@@ -63,7 +63,7 @@ namespace Disguise.RenderStream.Parameters
             SetupSelection();
             SetupDragAndDrop();
             
-            // Some callbacks we only want to execute when we are visible:
+            // Some callbacks we only want to execute when our panel is visible:
             
             RegisterCallback<AttachToPanelEvent>(x =>
             {
@@ -205,7 +205,7 @@ namespace Disguise.RenderStream.Parameters
             
             ParameterGroup targetGroup;
 
-            if (!HasSelection() && selectionOverride != null)
+            if (!HasSelection() && selectionOverride == null)
             {
                 targetGroup = m_ParameterList.DefaultGroup;
             }
@@ -238,7 +238,7 @@ namespace Disguise.RenderStream.Parameters
             
             AddParameterToTree(newParameter, targetGroup);
             
-            schedule.Execute(() => SelectRevealAndFrame(new []{ newParameter.ID }));
+            SelectRevealAndFrame(new[] { newParameter.ID });
         }
 
         /// <summary>

@@ -67,7 +67,7 @@ namespace Disguise.RenderStream.Parameters
                 case DragAndDropPosition.OverItem:
                     return (firstItem, parentItem) switch
                     {
-                        { firstItem: { IsParameter: true }, parentItem: { IsGroup: true } } => DragVisualMode.Move, 
+                        { firstItem: { IsParameter: true }, parentItem: { IsGroup: true } } => DragVisualMode.Move, // Drop parameter(s) on a group
                         _ => DragVisualMode.Rejected
                     };
             
@@ -78,14 +78,14 @@ namespace Disguise.RenderStream.Parameters
                     
                     return (firstItem, parentItem) switch
                     {
-                        { firstItem: { IsGroup: true }, parentItem: null } => DragVisualMode.Move,
-                        { firstItem: { IsParameter: true }, parentItem: { IsGroup: true } } => DragVisualMode.Move, 
+                        { firstItem: { IsGroup: true }, parentItem: null } => DragVisualMode.Move, // Drop group(s) between groups
+                        { firstItem: { IsParameter: true }, parentItem: { IsGroup: true } } => DragVisualMode.Move, // Drop parameter(s) between parameters
                         _ => DragVisualMode.Rejected
                     };
             
                 case DragAndDropPosition.OutsideItems:
                     return firstItem.IsParameter
-                        ? DragVisualMode.Move
+                        ? DragVisualMode.Move // Drop parameter(s) on an empty space
                         : DragVisualMode.Rejected;
             
                 default:
@@ -194,6 +194,9 @@ namespace Disguise.RenderStream.Parameters
             return DragVisualMode.Move;
         }
         
+        /// <summary>
+        /// Change a group's position in the group list.
+        /// </summary>
         void ReorderGroup(ParameterGroup group, int childIndex)
         {
             m_ParameterList.m_Groups.Remove(group);
@@ -205,6 +208,9 @@ namespace Disguise.RenderStream.Parameters
             viewController.Move(group.ID, -1, childIndex);
         }
 
+        /// <summary>
+        /// Reparent or reorder a parameter.
+        /// </summary>
         void ReparentParameter(Parameter parameter, ParameterGroup oldGroup, ParameterGroup newGroup, int childIndex = -1)
         {
             oldGroup.m_Parameters.Remove(parameter);

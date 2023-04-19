@@ -67,7 +67,7 @@ namespace Disguise.RenderStream.Parameters
             var currentSelection = selectedIndices.Select(GetIdForIndex).ToList();
             m_StateStorage.SelectedIDs = m_PreviousSelection;
             
-            Undo.RegisterCompleteObjectUndo(m_StateStorage.GetStorageObject(), "Change parameter selection");
+            Undo.RegisterCompleteObjectUndo(m_StateStorage.GetStorageObject(), Contents.UndoChangeSelection);
             
             m_StateStorage.SelectedIDs = currentSelection;
             m_PreviousSelection = currentSelection;

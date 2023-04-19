@@ -290,10 +290,15 @@ namespace Disguise.RenderStream.Parameters
                 renameableLabel.renameEnding += OnRenameItemEnding;
 
             var root = GetRootElement(ve);
-            root.RegisterCallback(m_PointerDownEventCallback, TrickleDown.TrickleDown);
+            
+            // Multiple cells have the same row root, only register once
+            if (!m_Manipulators.ContainsKey(root))
+            {
+                root.RegisterCallback(m_PointerDownEventCallback, TrickleDown.TrickleDown);
 
-            m_Manipulators[root] = new ContextualMenuManipulator(ContextClickedInternal);
-            root.AddManipulator(m_Manipulators[root]);
+                m_Manipulators[root] = new ContextualMenuManipulator(ContextClickedInternal);
+                root.AddManipulator(m_Manipulators[root]);
+            }
         }
 
         void UnregisterItemEvents(VisualElement ve)

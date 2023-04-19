@@ -93,6 +93,8 @@ namespace Disguise.RenderStream.Parameters
             {
                 if (m_Data.Group is { } group)
                 {
+                    m_TreeView.RegisterUndo(Contents.UndoToggleEnableParameterGroup);
+                    
                     group.Enabled = evt.newValue;
                     
                     // Groups may affect children
@@ -100,6 +102,8 @@ namespace Disguise.RenderStream.Parameters
                 }
                 else if (m_Data.Parameter is { } parameter)
                 {
+                    m_TreeView.RegisterUndo(Contents.UndoToggleEnableParameter);
+                    
                     parameter.Enabled = evt.newValue;
                 }
             }
