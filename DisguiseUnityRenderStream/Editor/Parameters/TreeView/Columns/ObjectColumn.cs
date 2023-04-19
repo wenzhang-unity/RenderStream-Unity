@@ -37,11 +37,13 @@ namespace Disguise.RenderStream.Parameters
                 this.RegisterValueChangedCallback(OnValueChanged);
             }
             
+            /// <inheritdoc/>
             public void Initialize(ParameterTreeView treeView)
             {
                 m_TreeView = treeView;
             }
 
+            /// <inheritdoc/>
             public void Bind(ItemData data)
             {
                 if (data.Parameter is { } parameter)
@@ -60,6 +62,7 @@ namespace Disguise.RenderStream.Parameters
                 }
             }
 
+            /// <inheritdoc/>
             public void Unbind()
             {
                 m_Parameter = default;

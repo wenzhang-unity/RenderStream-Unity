@@ -49,6 +49,7 @@ namespace Disguise.RenderStream.Parameters
                 m_Label.renameStarting += OnStartRenaming;
             }
             
+            /// <inheritdoc/>
             public void Initialize(ParameterTreeView treeView)
             {
                 m_TreeView = treeView;
@@ -56,6 +57,7 @@ namespace Disguise.RenderStream.Parameters
                 style.height = m_TreeView.fixedItemHeight;
             }
             
+            /// <inheritdoc/>
             public void Bind(ItemData data)
             {
                 if (data.Group is { } group)
@@ -80,10 +82,11 @@ namespace Disguise.RenderStream.Parameters
                 m_Data = data;
             }
 
+            /// <inheritdoc/>
             public void Unbind()
             {
                 m_Label.text = string.Empty;
-                m_Data = default;
+                m_Data = null;
             }
 
             void OnToggleValueChanged(ChangeEvent<bool> evt)

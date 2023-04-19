@@ -7,6 +7,9 @@ namespace Disguise.RenderStream.Parameters
 {
     partial class ParameterTreeView
     {
+        /// <summary>
+        /// A <see cref="DropdownField"/> where the choices are populated when the dropdown is opened.
+        /// </summary>
         abstract class DropdownButtonCell : DropdownField, ICell
         {
             protected ParameterTreeView m_TreeView;
@@ -54,13 +57,13 @@ namespace Disguise.RenderStream.Parameters
                 
                 this.SetDisplay(false);
 
+                // Override DropdownField interactions:
                 var clickable = new Clickable(OnClick);
                 this.AddManipulator(clickable);
-                
                 RegisterCallback<NavigationSubmitEvent>(OnNavigationSubmit);
                 
+                // Refresh using the same strategy as ObjectField:
                 m_AsyncOnProjectOrHierarchyChangedCallback = () => schedule.Execute(OnProjectOrHierarchyChangedCallback);
-                
                 RegisterCallback<AttachToPanelEvent>(_ =>
                 {
                     EditorApplication.projectChanged += m_AsyncOnProjectOrHierarchyChangedCallback;
@@ -75,6 +78,7 @@ namespace Disguise.RenderStream.Parameters
                 SetupIcon();
             }
             
+            /// <inheritdoc/>
             public void Initialize(ParameterTreeView treeView)
             {
                 m_TreeView = treeView;
@@ -104,6 +108,7 @@ namespace Disguise.RenderStream.Parameters
                 Add(m_Icon);
             }
 
+            /// <inheritdoc/>
             public void Bind(ItemData data)
             {
                 if (data.Parameter is { } parameter)
@@ -118,6 +123,7 @@ namespace Disguise.RenderStream.Parameters
                 UpdateDisplay();
             }
 
+            /// <inheritdoc/>
             public void Unbind()
             {
                 m_Parameter = default;
@@ -142,8 +148,14 @@ namespace Disguise.RenderStream.Parameters
                 evt.StopPropagation();
             }
             
+            /// <summary>
+            /// Called to update the icon/text.
+            /// </summary>
             protected abstract void UpdateDisplay();
 
+            /// <summary>
+            /// Called to show a generic menu after the dropdown has been opened.
+            /// </summary>
             protected abstract void ShowGenericMenu();
         }
     }

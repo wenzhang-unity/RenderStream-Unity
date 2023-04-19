@@ -21,11 +21,7 @@ namespace Disguise.RenderStream.Parameters
         
         class PropertyColumnCell : DropdownButtonCell
         {
-            public PropertyColumnCell()
-            {
-                
-            }
-
+            /// <inheritdoc/>
             protected override void UpdateDisplay()
             {
                 if (m_Parameter == null || m_Parameter.ReflectedObject == null || IsMissingComponentScript(m_Parameter.ReflectedObject))
@@ -50,6 +46,7 @@ namespace Disguise.RenderStream.Parameters
                 }
             }
 
+            /// <inheritdoc/>
             protected override void ShowGenericMenu()
             {
                 if (m_Parameter == null || m_Parameter.ReflectedObject == null || IsMissingComponentScript(m_Parameter.ReflectedObject))

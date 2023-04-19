@@ -26,6 +26,7 @@ namespace Disguise.RenderStream.Parameters
                 ShowIcon = true;
             }
 
+            /// <inheritdoc/>
             protected override void UpdateDisplay()
             {
                 if (m_Parameter is not { Object: GameObject go }|| go == null)
@@ -53,6 +54,7 @@ namespace Disguise.RenderStream.Parameters
                 Icon = componentIcon;
             }
 
+            /// <inheritdoc/>
             protected override void ShowGenericMenu()
             {
                 if (m_Parameter is not { Object: GameObject go } || go == null)
