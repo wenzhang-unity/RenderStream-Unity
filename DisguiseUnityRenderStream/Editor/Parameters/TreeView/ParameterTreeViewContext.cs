@@ -33,6 +33,9 @@ namespace Disguise.RenderStream.Parameters
             }
         }
 
+        /// <summary>
+        /// Handle item right-click when a single item is selected.
+        /// </summary>
         void HandleSingleItemContext(DropdownMenu menu, ItemData item)
         {
             if (item.Group is { } group)
@@ -60,6 +63,9 @@ namespace Disguise.RenderStream.Parameters
             }
         }
 
+        /// <summary>
+        /// Handle item right-click when multiple items are selected.
+        /// </summary>
         void HandleMultipleItemsContext(DropdownMenu menu)
         {
             menu.AppendAction(Contents.ContextMenuDuplicate, x => DuplicateSelectedItems());

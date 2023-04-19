@@ -5,6 +5,9 @@ namespace Disguise.RenderStream.Parameters
 {
     partial class ParameterTreeView
     {
+        /// <summary>
+        /// Contains text, textures, and other contents for the UI.
+        /// </summary>
         static class Contents
         {
             public static readonly string UndoToggleEnableParameterGroup = L10n.Tr("Toggle parameter group enabled");

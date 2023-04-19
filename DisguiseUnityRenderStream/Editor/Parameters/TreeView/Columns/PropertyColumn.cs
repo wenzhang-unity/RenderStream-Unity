@@ -28,7 +28,7 @@ namespace Disguise.RenderStream.Parameters
 
             protected override void UpdateDisplay()
             {
-                if (m_Parameter == null || m_Parameter.ReflectedObject == null || IsMissingComponent(m_Parameter.ReflectedObject))
+                if (m_Parameter == null || m_Parameter.ReflectedObject == null || IsMissingComponentScript(m_Parameter.ReflectedObject))
                 {
                     this.SetDisplay(false);
                     return;
@@ -52,7 +52,7 @@ namespace Disguise.RenderStream.Parameters
 
             protected override void ShowGenericMenu()
             {
-                if (m_Parameter == null || m_Parameter.ReflectedObject == null || IsMissingComponent(m_Parameter.ReflectedObject))
+                if (m_Parameter == null || m_Parameter.ReflectedObject == null || IsMissingComponentScript(m_Parameter.ReflectedObject))
                     return;
                 
                 void AddPropertyItem(GenericMenu menu, MemberInfoForEditor memberInfo)

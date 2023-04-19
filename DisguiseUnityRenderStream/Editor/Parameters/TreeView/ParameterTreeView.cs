@@ -8,40 +8,62 @@ namespace Disguise.RenderStream.Parameters
 {
     partial class ParameterTreeView : TreeViewExtended
     {
+        /// <summary>
+        /// The type of data we store in <see cref="UnityEngine.UIElements.TreeViewItemData{T}"/>.
+        /// Every item represents either a <see cref="ParameterGroup"/> or a <see cref="Parameter"/>.
+        /// </summary>
         public class ItemData
         {
-            public bool IsGroup => m_Group != null;
-            public bool IsParameter => m_Parameter != null;
+            public bool IsGroup => Group != null;
+            public bool IsParameter => Parameter != null;
 
-            public ParameterGroup Group => m_Group;
-            public Parameter Parameter => m_Parameter;
-            
-            readonly ParameterGroup m_Group;
-            readonly Parameter m_Parameter;
+            public ParameterGroup Group { get; }
+
+            public Parameter Parameter { get; }
 
             public ItemData(ParameterGroup group)
             {
-                m_Group = group;
-                m_Parameter = default;
+                Group = group;
+                Parameter = null;
             }
 
             public ItemData(Parameter parameter)
             {
-                m_Group = default;
-                m_Parameter = parameter;
+                Group = null;
+                Parameter = parameter;
             }
         }
 
+        /// <summary>
+        /// Contains the data we are editing.
+        /// </summary>
         DisguiseParameterList m_ParameterList;
+        
+        /// <summary>
+        /// Stores state that is not specific to this tree or <see cref="m_ParameterList"/>, ex window-specific selection data.
+        /// </summary>
         ITreeViewStateStorage m_StateStorage;
+        
+        /// <summary>
+        /// Lookup: parameter -> its group.
+        /// </summary>
         readonly Dictionary<Parameter, ParameterGroup> m_ParameterGroups = new Dictionary<Parameter, ParameterGroup>();
+        
+        /// <summary>
+        /// The current search filter.
+        /// </summary>
         string m_SearchString;
 
+        /// <summary>
+        /// Called when we are created in the UI hierarchy.
+        /// </summary>
         public ParameterTreeView()
         {
-            SetupSelection();
             SetupDraw();
+            SetupSelection();
             SetupDragAndDrop();
+            
+            // Some callbacks we only want to execute when we are visible:
             
             RegisterCallback<AttachToPanelEvent>(x =>
             {
@@ -56,6 +78,9 @@ namespace Disguise.RenderStream.Parameters
             });
         }
 
+        /// <summary>
+        /// Assigns the data to edit.
+        /// </summary>
         public void SetData(DisguiseParameterList parameterList, ITreeViewStateStorage stateStorage)
         {
             m_ParameterList = parameterList;
@@ -69,6 +94,9 @@ namespace Disguise.RenderStream.Parameters
             Rebuild();
         }
         
+        /// <summary>
+        /// Converts our data source into UI items.
+        /// </summary>
         List<TreeViewItemData<ItemData>> GenerateDataTree()
         {
             m_ParameterGroups.Clear();
@@ -105,6 +133,9 @@ namespace Disguise.RenderStream.Parameters
             return allItems;
         }
 
+        /// <summary>
+        /// Caches the editor-specific information for the serialized reflection info of properties.
+        /// </summary>
         void InitializeReflectionInfo()
         {
             foreach (var group in m_ParameterList.m_Groups)
@@ -116,24 +147,36 @@ namespace Disguise.RenderStream.Parameters
             }
         }
 
+        /// <summary>
+        /// Should be called before modifying <see cref="m_ParameterList"/>.
+        /// </summary>
+        /// <param name="message"></param>
         void RegisterUndo(string message)
         {
             Undo.RegisterCompleteObjectUndo(m_ParameterList, message);
         }
 
+        /// <summary>
+        /// Should be called after an undo/redo event to re-initialize tree data.
+        /// </summary>
         void RebuildAfterUndoRedo()
         {
             SetData(m_ParameterList, m_StateStorage);
         }
         
+        /// <summary>
+        /// Returns the group that this parameter belongs to.
+        /// </summary>
         ParameterGroup GetGroupOfParameter(Parameter parameter)
         {
             return m_ParameterGroups[parameter];
         }
 
+        /// <summary>
+        /// Adds a new group (to the data source and the tree representation).
+        /// </summary>
         public void CreateNewGroup()
         {
-            RegisterSelectionUndoRedo();
             RegisterUndo(Contents.UndoCreateNewParameterGroup);
             
             var newGroup = new ParameterGroup
@@ -158,7 +201,6 @@ namespace Disguise.RenderStream.Parameters
         /// <param name="selectionOverride">Specifies an item to treat as the current selection instead of the current UI selection.</param>
         public void CreateNewParameter(ItemData selectionOverride = null)
         {
-            RegisterSelectionUndoRedo();
             RegisterUndo(Contents.UndoCreateNewParameter);
             
             ParameterGroup targetGroup;
@@ -199,12 +241,15 @@ namespace Disguise.RenderStream.Parameters
             schedule.Execute(() => SelectRevealAndFrame(new []{ newParameter.ID }));
         }
 
+        /// <summary>
+        /// Deletes all selected items.
+        /// <remarks>Skips the default group.</remarks>
+        /// </summary>
         protected override void DeleteSelectedItems()
         {
             if (!HasSelection())
                 return;
             
-            RegisterSelectionUndoRedo();
             RegisterUndo(Contents.UndoDeleteParameter);
             
             var toDelete = selectedItems.ToList();
@@ -231,12 +276,14 @@ namespace Disguise.RenderStream.Parameters
             }
         }
 
+        /// <summary>
+        /// Duplicates all selected items.
+        /// </summary>
         protected override void DuplicateSelectedItems()
         {
             if (!HasSelection())
                 return;
             
-            RegisterSelectionUndoRedo();
             RegisterUndo(Contents.UndoDuplicateParameter);
             
             var selection = selectedItems.ToList();
@@ -252,6 +299,9 @@ namespace Disguise.RenderStream.Parameters
             SelectRevealAndFrame(newSelection);
         }
         
+        /// <summary>
+        /// Duplicates an item, returning the clone's ID in <paramref name="duplicateID"/>.
+        /// </summary>
         void DuplicateItem(ItemData item, out int duplicateID)
         {
             if (item.Group is { } group)
@@ -288,12 +338,18 @@ namespace Disguise.RenderStream.Parameters
             }
         }
         
+        /// <summary>
+        /// Adds a group the tree representation.
+        /// </summary>
         void AddGroupToTree(ParameterGroup group, int childIndex = -1)
         {
             var item = new TreeViewItemData<ItemData>(group.ID, new ItemData(group));
             AddItem(item, -1, childIndex);
         }
         
+        /// <summary>
+        /// Adds a parameter to a group in the tree representation.
+        /// </summary>
         void AddParameterToTree(Parameter parameter, ParameterGroup group, int groupChildIndex = -1)
         {
             m_ParameterGroups[parameter] = group;
@@ -302,6 +358,9 @@ namespace Disguise.RenderStream.Parameters
             AddItem(item, group.ID, groupChildIndex);
         }
 
+        /// <summary>
+        /// Refreshes an item's representation in the tree. Should be called when its source data has changed.
+        /// </summary>
         void RefreshItemById(int id)
         {
             var index = viewController.GetIndexForId(id);
@@ -309,7 +368,7 @@ namespace Disguise.RenderStream.Parameters
         }
         
         /// <summary>
-        /// Imitates IMGUI's TreeViewControl.searchString
+        /// Imitates IMGUI's TreeViewControl.searchString.
         /// </summary>
         public string SearchString
         {
@@ -326,12 +385,12 @@ namespace Disguise.RenderStream.Parameters
         }
 
         /// <summary>
-        /// Imitates IMGUI's TreeViewControl.hasSearch
+        /// Imitates IMGUI's TreeViewControl.hasSearch.
         /// </summary>
         public bool HasSearch => !string.IsNullOrWhiteSpace(m_SearchString);
 
         /// <summary>
-        /// Imitates IMGUI's TreeViewControl.searchString behavior
+        /// Imitates IMGUI's TreeViewControl.searchString behavior.
         /// </summary>
         bool MatchesSearch(ItemData item, string searchString)
         {

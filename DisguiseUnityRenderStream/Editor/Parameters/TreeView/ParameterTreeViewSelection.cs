@@ -8,35 +8,28 @@ namespace Disguise.RenderStream.Parameters
 {
     partial class ParameterTreeView
     {
-        bool HasSelection()
-        {
-            return selectedIndex >= 0;
-        }
-        
-        void SetupSelection()
-        {
-            selectionType = SelectionType.Multiple;
-
-            selectedIndicesChanged += SelectionChanged;
-        }
-        
+        /// <summary>
+        /// Holds externally persistant storage.
+        /// </summary>
         public interface ITreeViewStateStorage
         {
             List<int> SelectedIDs { get; set; }
 
             UnityEngine.Object GetStorageObject();
         }
-
+        
         /// <summary>
-        /// Call just before changing the selection.
+        /// Initialized selection settings and callbacks.
         /// </summary>
-        void RegisterSelectionUndoRedo()
+        void SetupSelection()
         {
-            Undo.RegisterCompleteObjectUndo(m_StateStorage.GetStorageObject(), "Change parameter selection");
+            selectionType = SelectionType.Multiple;
+
+            selectedIndicesChanged += SelectionChanged;
         }
 
         /// <summary>
-        /// <see cref="UnityEditor.IMGUI.Controls.TreeView.SelectionChanged"/> notifies us after the selection has been changed, but the undo
+        /// <see cref="SelectionChanged"/> notifies us after the selection has been changed, but the undo
         /// system expects the selection before it was changed to be registered. So we keep track of the previous
         /// selection to provide it to the undo system.
         /// </summary>
@@ -53,6 +46,7 @@ namespace Disguise.RenderStream.Parameters
         }
 
         /// <summary>
+        /// Enforces multi-selection rules.
         /// Registers the new selection in the undo system.
         /// </summary>
         void SelectionChanged(IEnumerable<int> selectedIds)
@@ -110,6 +104,14 @@ namespace Disguise.RenderStream.Parameters
             });
                 
             SetSelectionByIdWithoutNotify(filteredSelection);
+        }
+        
+        /// <summary>
+        /// Returns true when one or more items are selected in the tree.
+        /// </summary>
+        bool HasSelection()
+        {
+            return selectedIndex >= 0;
         }
     }
 }

@@ -7,11 +7,15 @@ namespace Disguise.RenderStream.Parameters
 {
     partial class ParameterTreeView
     {
+        /// <summary>
+        /// Starts renaming the selected item.
+        /// </summary>
         void RenameSelection()
         {
             BeginRenameAtIndex(selectedIndex);
         }
         
+        /// <inheritdoc/>
         protected override bool CanRename(int index)
         {
             // The same click event that starts a drag and drop operation can start a rename operation, cancel the rename
@@ -24,6 +28,7 @@ namespace Disguise.RenderStream.Parameters
             return item is not { Group: { IsDefaultGroup: true } };
         }
 
+        /// <inheritdoc/>
         protected override void RenameEnded(int id, bool canceled = false)
         {
             if (canceled)
@@ -89,6 +94,7 @@ namespace Disguise.RenderStream.Parameters
             RefreshItemById(id);
         }
         
+        /// <inheritdoc/>
         protected override string GetItemTextForIndex(int index)
         {
             var itemData = GetItemDataForIndex<ItemData>(index);
@@ -101,11 +107,17 @@ namespace Disguise.RenderStream.Parameters
                 throw new NotSupportedException();
         }
         
+        /// <summary>
+        /// Ensures a unique group name among all groups.
+        /// </summary>
         string GetUniqueGroupName(string baseName)
         {
             return ObjectNames.GetUniqueName(m_ParameterList.m_Groups.Select(x => x.Name).ToArray(), baseName);
         }
         
+        /// <summary>
+        /// Ensures a unique parameter name among a group's parameters.
+        /// </summary>
         string GetUniqueParameterName(string baseName, ParameterGroup group)
         {
             return ObjectNames.GetUniqueName(group.m_Parameters.Select(x => x.Name).ToArray(), baseName);

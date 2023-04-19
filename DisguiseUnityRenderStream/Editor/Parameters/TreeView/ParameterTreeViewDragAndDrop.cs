@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -124,7 +123,6 @@ namespace Disguise.RenderStream.Parameters
 
             if (newSelection is { Length: > 0 })
             {
-                RegisterSelectionUndoRedo();
                 SelectRevealAndFrame(newSelection);
             }
             

@@ -42,7 +42,7 @@ namespace Disguise.RenderStream.Parameters
                     componentButtonLabel = Contents.DropdownMissingComponentLabel;
                 else if (m_Parameter.Component == null)
                     componentButtonLabel = Contents.DropdownNoneLabel;
-                else if (IsMissingComponent(m_Parameter.Component))
+                else if (IsMissingComponentScript(m_Parameter.Component))
                     componentButtonLabel = Contents.DropdownMissingScriptLabel;
                 else
                     componentButtonLabel = ObjectNames.NicifyVariableName(m_Parameter.Component.GetType().Name);

@@ -5,8 +5,12 @@ using UnityEngine.UIElements;
 namespace Disguise.RenderStream.Parameters
 {
     /// <summary>
-    /// From the com.unity.sequences package.
+    /// <para>
+    /// Adapted from the com.unity.sequences package.
+    /// </para>
+    /// <para>
     /// Label that can be renamed.
+    /// </para>
     /// </summary>
     class RenameableLabel : VisualElement
     {

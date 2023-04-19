@@ -6,6 +6,10 @@ namespace Disguise.RenderStream.Parameters
 {
     partial class ParameterTreeView
     {
+        /// <summary>
+        /// Overrides keyboard navigation for <see cref="KeyboardNavigationOperation.SelectAll"/>.
+        /// (Selects either all groups or all parameters inside a group depending on the current selection).
+        /// </summary>
         protected override void KeyboardNavigation(KeyboardNavigationOperation operation, EventBase evt)
         {
             if (operation == KeyboardNavigationOperation.SelectAll)
@@ -16,14 +20,10 @@ namespace Disguise.RenderStream.Parameters
 
                     if (firstItem.IsGroup)
                     {
-                        RegisterSelectionUndoRedo();
-                        
                         SelectAllGroups();
                     }
                     else if (firstItem.IsParameter)
                     {
-                        RegisterSelectionUndoRedo();
-
                         var targetGroup = ResolveItemGroup(firstItem);
                         SelectAllParametersInGroup(targetGroup);
                     }
@@ -34,8 +34,6 @@ namespace Disguise.RenderStream.Parameters
                 }
                 else
                 {
-                    RegisterSelectionUndoRedo();
-                    
                     SelectAllGroups();
                 }
                 
@@ -43,12 +41,18 @@ namespace Disguise.RenderStream.Parameters
             }
         }
 
+        /// <summary>
+        /// Selects all the groups in the tree.
+        /// </summary>
         void SelectAllGroups()
         {
             var IDsToSelect = m_ParameterList.m_Groups.Select(group => group.ID);
             SelectRevealAndFrame(IDsToSelect);
         }
 
+        /// <summary>
+        /// Returns the group that an item represents or belongs to.
+        /// </summary>
         ParameterGroup ResolveItemGroup(ItemData item)
         {
             if (item.IsGroup)
@@ -59,6 +63,9 @@ namespace Disguise.RenderStream.Parameters
                 throw new NotSupportedException();
         }
         
+        /// <summary>
+        /// Selects all the parameters inside the specified group.
+        /// </summary>
         void SelectAllParametersInGroup(ParameterGroup group)
         {
             var IDsToSelect = group.m_Parameters.Select(parameter => parameter.ID);

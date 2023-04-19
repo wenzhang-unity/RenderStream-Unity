@@ -7,10 +7,14 @@ using UnityEngine.UIElements;
 namespace Disguise.RenderStream.Parameters
 {
     /// <summary>
-    /// Inspired by SequencesTreeView from the com.unity.sequences package.
+    /// <para>
+    /// Adapted from SequencesTreeView from the com.unity.sequences package.
+    /// </para>
+    /// <para>
     /// TreeViewExtended offers more control on its items than the base UI Toolkit TreeView.
     /// It allows to delete and rename items and having a custom context menu per items. This tree view mimic the
     /// behaviors that exists on an IMGUI TreeView.
+    /// </para>
     /// </summary>
     abstract class TreeViewExtended : MultiColumnTreeView
     {
