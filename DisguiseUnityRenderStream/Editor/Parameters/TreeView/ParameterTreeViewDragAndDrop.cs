@@ -7,6 +7,9 @@ namespace Disguise.RenderStream.Parameters
 {
     partial class ParameterTreeView
     {
+        /// <summary>
+        /// Configures callbacks for drag &amp; drop interactions.
+        /// </summary>
         void SetupDragAndDrop()
         {
             reorderable = true;
@@ -17,6 +20,9 @@ namespace Disguise.RenderStream.Parameters
             handleDrop += HandleDrop;
         }
 
+        /// <summary>
+        /// Configures callbacks for drag &amp; drop interactions when this TreeView is attached to a panel.
+        /// </summary>
         void SetupDragAndDropOnAttach()
         {
             DragAndDrop.AddDropHandler(SceneDropHandler);
@@ -24,6 +30,9 @@ namespace Disguise.RenderStream.Parameters
             RegisterCallback<DragExitedEvent>(OnDragExited);
         }
 
+        /// <summary>
+        /// Configures callbacks for drag &amp; drop interactions when this TreeView is detached from a panel.
+        /// </summary>
         void ShutdownDragAndDropOnDetach()
         {
             DragAndDrop.RemoveDropHandler(SceneDropHandler);

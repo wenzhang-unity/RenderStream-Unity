@@ -18,7 +18,7 @@ namespace Disguise.RenderStream.Parameters
         /// <inheritdoc/>
         protected override bool CanRename(int index)
         {
-            // The same click event that starts a drag and drop operation can start a rename operation, cancel the rename
+            // The same click event that starts a drag and drop interaction can start a rename interaction, cancel the rename
             if (m_IsReorderingItems)
                 return false;
             

@@ -7,8 +7,19 @@ namespace Disguise.RenderStream.Parameters
 {
     partial class ParameterTreeView
     {
+        /// <summary>
+        /// True while drag &amp; drop contains items from this tree.
+        /// <remarks>
+        /// Not entirely accurate (<see cref="OnDragExited"/>) but good enough for our purposes.
+        /// We only care about the first 500ms of a drag &amp; drop interaction to prevent <see cref="RenameableLabel"/> from activating.
+        /// </remarks>
+        /// </summary>
         bool m_IsReorderingItems;
         
+        /// <summary>
+        /// Called when drag & drop is released or exits the current panel. Good enough for our purposes.
+        /// </summary>
+        /// <param name="evt"></param>
         void OnDragExited(DragExitedEvent evt)
         {
             m_IsReorderingItems = false;
@@ -29,6 +40,9 @@ namespace Disguise.RenderStream.Parameters
             return true;
         }
         
+        /// <summary>
+        /// Configures a drag & drop originating from this tree.
+        /// </summary>
         StartDragArgs SetupDragAndDrop(SetupDragAndDropArgs args)
         {
             var selection = args.selectedIds.Select(GetItemDataForId<ItemData>).Where(x => x != null);
@@ -40,6 +54,9 @@ namespace Disguise.RenderStream.Parameters
             return startArgs;
         }
         
+        /// <summary>
+        /// Called while items are being re-ordered in the tree.
+        /// </summary>
         DragVisualMode DragAndDropUpdateReorder(HandleDragAndDropArgs args, IEnumerable<ItemData> data)
         {
             var firstItem = data.First();
@@ -76,6 +93,9 @@ namespace Disguise.RenderStream.Parameters
             }
         }
         
+        /// <summary>
+        /// Called after items have been re-ordered in the tree.
+        /// </summary>
         DragVisualMode HandleDropReorder(HandleDragAndDropArgs args, IList<ItemData> data, out int[] newSelection)
         {
             DragVisualMode mode = args.dropPosition switch
