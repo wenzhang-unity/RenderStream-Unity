@@ -46,7 +46,6 @@ namespace Disguise.RenderStream.Parameters
                 {
                     Selection.activeGameObject = gameObject;
                     SceneView.FrameLastActiveSceneView();
-                    
                 }
                 
                 return DragAndDropVisualMode.Link;
