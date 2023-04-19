@@ -120,7 +120,7 @@ namespace Disguise.RenderStream.Parameters
         
         /// <summary>
         /// Applies data from Disguise onto the target.
-        /// <remarks>Called during <see cref="UnityEngine.Rendering.RenderPipelineManager.beginContextRendering"/></remarks>
+        /// <remarks>Called at the start of the frame in <see cref="UnityEngine.PlayerLoop.Update.ScriptRunBehaviourUpdate"/></remarks>
         /// </summary>
         void ApplyData(SceneGPUData data);
         
@@ -186,6 +186,7 @@ namespace Disguise.RenderStream.Parameters
             };
         }
 
+#if ENABLE_IL2CPP
         void SetValueByReflection(T value)
         {
             if (m_Target.MemberInfo is FieldInfo field)
@@ -201,6 +202,7 @@ namespace Disguise.RenderStream.Parameters
                 throw new ArgumentOutOfRangeException(nameof(m_Target.MemberInfo), $"Invalid member type {m_Target.MemberInfo?.GetType().Name}.");
             }
         }
+#endif
     }
     
     class ThisGetterSetter<T> : GetterSetter<T> where T : UnityEngine.Object

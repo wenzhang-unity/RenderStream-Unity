@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using Disguise.RenderStream.Parameters;
 using Disguise.RenderStream.Utils;
@@ -58,11 +57,12 @@ namespace Disguise.RenderStream
         }
 
         struct RenderStreamUpdate { }
+        struct RenderStreamGfxUpdate { }
 
         protected virtual void Initialize()
         {
             PlayerLoopExtensions.RegisterUpdate<TimeUpdate.WaitForLastPresentationAndUpdateTime, RenderStreamUpdate>(AwaitFrame);
-            RenderPipelineManager.beginContextRendering += OnBeginContextRendering;
+            PlayerLoopExtensions.RegisterUpdate<Update.ScriptRunBehaviourUpdate, RenderStreamGfxUpdate>(UpdateGfxResources);
         }
 
         protected DisguiseRenderStream(ManagedSchema schema)
@@ -241,7 +241,6 @@ namespace Disguise.RenderStream
         {
             RS_ERROR error = PluginEntry.instance.awaitFrameData(500, out var frameData);
             LatestFrameData = frameData;
-            m_HasUpdatedLiveTexturesThisFrame = false;
             
             if (error == RS_ERROR.RS_ERROR_QUIT)
                 Application.Quit();
@@ -268,7 +267,7 @@ namespace Disguise.RenderStream
         }
 
         // Updates the RenderTextures assigned to image parameters on the render thread to avoid stalling the main thread
-        void OnBeginContextRendering(ScriptableRenderContext context, List<Camera> cameras)
+        void UpdateGfxResources()
         {
             if (!HasNewFrameData)
                 return;
@@ -278,16 +277,6 @@ namespace Disguise.RenderStream
             
             var spec = m_Schema.scenes[LatestFrameData.scene];
             var sceneData = m_SceneData[LatestFrameData.scene];
-            
-            // Only run once per frame for the main render context
-            if (m_HasUpdatedLiveTexturesThisFrame)
-                return;
-            foreach (var camera in cameras)
-            {
-                if (camera.cameraType != CameraType.Game)
-                    return;
-            }
-            m_HasUpdatedLiveTexturesThisFrame = true;
             
             using var imageData = new NativeArray<ImageFrameData>(sceneData.Textures.Length, Allocator.Temp);
             if (PluginEntry.instance.GetFrameImageData(spec.hash, imageData.AsSpan()) != RS_ERROR.RS_ERROR_SUCCESS)
@@ -338,12 +327,12 @@ namespace Disguise.RenderStream
 
             if (cmd != null)
             {
-                context.ExecuteCommandBuffer(cmd);
+                Graphics.ExecuteCommandBuffer(cmd);
                 CommandBufferPool.Release(cmd);
                 
                 var gpuDataCmd = CommandBufferPool.Get($"Applying Disguise GPU data");
                 sceneData.ApplyGPUData(gpuDataCmd);
-                context.ExecuteCommandBuffer(gpuDataCmd);
+                Graphics.ExecuteCommandBuffer(gpuDataCmd);
             }
         }
 
@@ -394,6 +383,5 @@ namespace Disguise.RenderStream
         
         SceneData[] m_SceneData;
         DisguiseRenderStreamSettings m_Settings;
-        bool m_HasUpdatedLiveTexturesThisFrame;
     }
 }
