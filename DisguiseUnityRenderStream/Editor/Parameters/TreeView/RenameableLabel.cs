@@ -6,7 +6,9 @@ namespace Disguise.RenderStream.Parameters
 {
     /// <summary>
     /// <para>
-    /// Adapted from the com.unity.sequences package.
+    /// Adapted from the com.unity.sequences package:
+    /// * Removed dependency on USS file
+    /// * Added renameStarting counterpart to renameEnding
     /// </para>
     /// <para>
     /// Label that can be renamed.

@@ -8,7 +8,14 @@ namespace Disguise.RenderStream.Parameters
 {
     /// <summary>
     /// <para>
-    /// Adapted from SequencesTreeView from the com.unity.sequences package.
+    /// Adapted from SequencesTreeView from the com.unity.sequences package:
+    /// * Extends MultiColumnTreeView instead of TreeView
+    /// * Added OnKeyboardNavigation
+    /// * Added ContextClickedEmptyAreaInternal
+    /// * Added BeginRenameAsync for an additional CanRename check
+    /// * MakeItem/BindItem/UnbindItem/DestroyItem refactored to accept externally created items
+    /// * Not every cell will have a RenameableLabel, handle null cases
+    /// * UnregisterItemEvents: many cells deregister the same manipulator, handle this case
     /// </para>
     /// <para>
     /// TreeViewExtended offers more control on its items than the base UI Toolkit TreeView.
