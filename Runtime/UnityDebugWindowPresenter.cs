@@ -125,7 +125,7 @@ namespace Disguise.RenderStream
                     List<string> options = new List<string>();
                     options.Add(k_NoneTextureLabel);
 
-                    foreach (var channel in schema.channels)
+                    foreach (var channel in schema.channels.OrderBy(s => s))
                     {
                         options.Add(channel);
                     }
@@ -233,9 +233,12 @@ namespace Disguise.RenderStream
 
         void RefreshOutput()
         {
-            m_Outputs = FindObjectsByType<DisguiseCameraCapture>(
-                FindObjectsSortMode.InstanceID).Select(
-                    x => x.GetComponent<CameraCapture>()).ToArray();
+            m_Outputs = FindObjectsByType<DisguiseCameraCapture>(FindObjectsSortMode.InstanceID)
+                .Where(c => c.enabled) // Ignore disabled cameras
+                .Where(c => c.transform.parent)
+                .Select(x => x.GetComponent<CameraCapture>()) 
+                .OrderBy(x => x.transform.parent.name) // Sort by name of the parent (the original camera from which the stream camera was created)
+                .ToArray();
         }
         
         void RefreshInput()
