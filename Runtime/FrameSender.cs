@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 
 namespace Disguise.RenderStream
@@ -27,7 +28,7 @@ namespace Disguise.RenderStream
             m_lastFrameCount = -1;
             m_streamHandle = stream.handle;
             m_pixelFormat = stream.format;
-
+            
             m_description = new CameraCaptureDescription()
             {
                 m_colorSpace = CameraCaptureDescription.ColorSpace.sRGB,

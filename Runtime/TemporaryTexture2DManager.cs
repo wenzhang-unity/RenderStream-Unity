@@ -179,9 +179,11 @@ namespace Disguise.RenderStream
 
         Texture2D CreateTexture(Texture2DDescriptor descriptor)
         {
-            DebugLog($"Created texture: {descriptor}");
+            var texture = DisguiseTextures.CreateTexture(descriptor.Width, descriptor.Height, descriptor.Format, !descriptor.Linear, null);
+            
+            DebugLog($"Created texture: {descriptor} with format {texture.graphicsFormat}");
 
-            return DisguiseTextures.CreateTexture(descriptor.Width, descriptor.Height, descriptor.Format, !descriptor.Linear, null);
+            return texture;
         }
 
         void DestroyTexture(Texture2D texture)

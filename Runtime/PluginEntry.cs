@@ -39,16 +39,24 @@ namespace Disguise.RenderStream
         // Should match NativeRenderingPlugin::ToDXFormat in the native plugin's DX12Texture.h
         public static GraphicsFormat ToGraphicsFormat(RSPixelFormat fmt, bool sRGB)
         {
-            // All textures are expected in the normalized 0-1 range.
-            // CUDA interop expects an alpha channel.
-            return fmt switch
-            {
-                RSPixelFormat.RS_FMT_BGRA8 or RSPixelFormat.RS_FMT_BGRX8 => sRGB ? GraphicsFormat.B8G8R8A8_SRGB : GraphicsFormat.B8G8R8A8_UNorm,
-                RSPixelFormat.RS_FMT_RGBA32F => GraphicsFormat.R32G32B32_SFloat, // Has no UNorm format
-                RSPixelFormat.RS_FMT_RGBA16 => GraphicsFormat.R16G16B16A16_UNorm,
-                RSPixelFormat.RS_FMT_RGBA8 or RSPixelFormat.RS_FMT_RGBX8 => sRGB ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm,    
-                _ => throw new ArgumentOutOfRangeException()
-            };
+            var rtFormat = PluginEntry.ToRTFormat(fmt);
+            var graphicsFormat = GraphicsFormatUtility.GetGraphicsFormat(rtFormat, false);
+            
+            if (sRGB)
+                graphicsFormat = GraphicsFormatUtility.GetSRGBFormat(graphicsFormat);
+
+            return graphicsFormat;
+
+            // // All textures are expected in the normalized 0-1 range.
+            // // CUDA interop expects an alpha channel.
+            // return fmt switch
+            // {
+            //     RSPixelFormat.RS_FMT_BGRA8 or RSPixelFormat.RS_FMT_BGRX8 => sRGB ? GraphicsFormat.B8G8R8A8_SRGB : GraphicsFormat.B8G8R8A8_UNorm,
+            //     RSPixelFormat.RS_FMT_RGBA32F => GraphicsFormat.R32G32B32A32_SFloat, // Has no UNorm format
+            //     RSPixelFormat.RS_FMT_RGBA16 => GraphicsFormat.R16G16B16A16_UNorm,
+            //     RSPixelFormat.RS_FMT_RGBA8 or RSPixelFormat.RS_FMT_RGBX8 => sRGB ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm,    
+            //     _ => throw new ArgumentOutOfRangeException()
+            // };
         }
         
         public static TextureFormat ToTextureFormat(RSPixelFormat fmt)
@@ -57,8 +65,20 @@ namespace Disguise.RenderStream
             {
                 RSPixelFormat.RS_FMT_BGRA8 or RSPixelFormat.RS_FMT_BGRX8 => TextureFormat.BGRA32,
                 RSPixelFormat.RS_FMT_RGBA32F => TextureFormat.RGBAFloat,
-                RSPixelFormat.RS_FMT_RGBA16 => TextureFormat.RGBAHalf,
+                RSPixelFormat.RS_FMT_RGBA16 => TextureFormat.RGBA64,
                 RSPixelFormat.RS_FMT_RGBA8 or RSPixelFormat.RS_FMT_RGBX8 => TextureFormat.RGBA32,
+                _ => throw new ArgumentOutOfRangeException()
+            };
+        }
+        
+        public static RenderTextureFormat ToRTFormat(RSPixelFormat fmt)
+        {
+            return fmt switch
+            {
+                RSPixelFormat.RS_FMT_BGRA8 or RSPixelFormat.RS_FMT_BGRX8 => RenderTextureFormat.BGRA32,
+                RSPixelFormat.RS_FMT_RGBA32F => RenderTextureFormat.ARGBFloat,
+                RSPixelFormat.RS_FMT_RGBA16 => RenderTextureFormat.ARGB64,
+                RSPixelFormat.RS_FMT_RGBA8 or RSPixelFormat.RS_FMT_RGBX8 => RenderTextureFormat.ARGB32,
                 _ => throw new ArgumentOutOfRangeException()
             };
         }

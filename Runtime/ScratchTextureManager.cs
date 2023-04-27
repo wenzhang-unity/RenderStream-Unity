@@ -8,7 +8,7 @@ namespace Disguise.RenderStream
     /// <summary>
     /// A simpler version of <see cref="Disguise.RenderStream.TemporaryTexture2DManager"/> that doesn't need to manage texture lifetime.
     /// </summary>
-    abstract class ScratchTextureManager<TTexture>
+    abstract class ScratchTextureManager<TTexture> where TTexture : Texture
     {
         readonly Dictionary<Texture2DDescriptor, TTexture> m_Items = new Dictionary<Texture2DDescriptor, TTexture>();
 
@@ -33,10 +33,11 @@ namespace Disguise.RenderStream
                 return item;
             }
 
-            DebugLog($"Created texture: {descriptor}");
-            
             var texture = CreateTexture(descriptor);
             m_Items.Add(descriptor, texture);
+            
+            DebugLog($"Created texture: {descriptor} with {texture.graphicsFormat}");
+            
             return texture;
         }
 
