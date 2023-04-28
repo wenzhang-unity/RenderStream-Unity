@@ -5,6 +5,7 @@ namespace Disguise.RenderStream.Utils
 {
     class ObjectField
     {
+        public ManagedRemoteParameter remoteParameter;
         public object target;
         public MemberInfo info;
 

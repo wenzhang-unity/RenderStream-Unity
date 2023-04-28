@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Disguise.RenderStream.Utils;
 using UnityEngine;
-using UnityEngine.Assertions;
 
 namespace Disguise.RenderStream
 {
@@ -52,6 +51,40 @@ namespace Disguise.RenderStream
             get => m_Selected;
             set => m_Selected = value;
         }
+
+        string SelectedString
+        {
+            get
+            {
+                // Fill a dictionary to map from selected index to the displayed text (used to search in the scene)
+                if (m_SelectedIndexToText == null)
+                {
+                    m_SelectedIndexToText = new();
+                    int sceneIndex = gameObject.scene.buildIndex;
+                    if (sceneIndex < DisguiseRenderStream.Instance.Schema.scenes.Length)
+                    {
+                        var remoteParameters = DisguiseRenderStream.Instance.Schema.scenes[sceneIndex].parameters;
+                        var disguiseRemoteParameters = GetComponent<DisguiseRemoteParameters>();
+                        if (disguiseRemoteParameters != null)
+                        {
+                            string selectedRemoteParameterKey = $"{disguiseRemoteParameters.prefix} {nameof(Selected)}";
+                            var disguiseRemoteParameter = 
+                                remoteParameters.FirstOrDefault(r => r.key == selectedRemoteParameterKey);
+                            if (disguiseRemoteParameter != null)
+                            {
+                                // Skipping 0 since it is none which mean nothing is selected...
+                                for (int i = 1; i < disguiseRemoteParameter.options.Length; ++i)
+                                {
+                                    m_SelectedIndexToText.Add(i, disguiseRemoteParameter.options[i]);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return m_SelectedIndexToText.TryGetValue(Selected, out var ret) ? ret : "";
+            }
+        }
         
         /// <summary>
         /// The <see cref="PresenterResizeStrategies">strategy</see> for resizing the selected texture to screen.
@@ -74,8 +107,16 @@ namespace Disguise.RenderStream
         [SerializeField]
         Presenter m_InputPresenter;
 
-        CameraCapture[] m_Outputs = {};
-        RenderTexture[] m_Inputs = {};
+        /// <summary>
+        /// Index of the last values of <see cref="m_Selected"/> that was processed during the <see cref="Update"/>
+        /// method.
+        /// </summary>
+        int m_LastProcessSelected = -1;
+
+        /// <summary>
+        /// Map a <see cref="Selected"/> index value to the display text.
+        /// </summary>
+        Dictionary<int, string> m_SelectedIndexToText;
 
         static BlitStrategy.Strategy PresenterStrategyToBlitStrategy(PresenterResizeStrategies strategy) => strategy switch
         {
@@ -89,8 +130,8 @@ namespace Disguise.RenderStream
 
         /// <summary>
         /// Instantiates a prefab with a GameObject hierarchy configured to be dropped into a scene.
-        /// It contains the <see cref="DisguisePresenter"/> and <see cref="DisguiseRemoteParameters"/> components,
-        /// as well as the necessary <see cref="m_OutputPresenter"/> and <see cref="m_InputPresenter"/>.
+        /// It contains the <see cref="UnityDebugWindowPresenter"/> and <see cref="DisguiseRemoteParameters"/> 
+        /// components, as well as the necessary <see cref="m_OutputPresenter"/> and <see cref="m_InputPresenter"/>.
         /// </summary>
         /// <returns></returns>
         public static GameObject LoadPrefab()
@@ -131,7 +172,7 @@ namespace Disguise.RenderStream
                     }
 
                     var remoteParameters = FindObjectsByType<DisguiseRemoteParameters>(FindObjectsSortMode.None);
-                    foreach (var sceneParameter in sceneSchema.parameters)
+                    foreach (var sceneParameter in sceneSchema.parameters.OrderBy(p => p.displayName))
                     {
                         var remoteParams = Array.Find(remoteParameters, rp => sceneParameter.key.StartsWith(rp.prefix));
                         var field = new ObjectField();
@@ -154,96 +195,90 @@ namespace Disguise.RenderStream
         /// <remarks>
         /// This class should only be instantiated through <see cref="LoadPrefab"/>.
         /// </remarks>
-        private UnityDebugWindowPresenter()
+        UnityDebugWindowPresenter()
         {
-            
         }
 
         void OnEnable()
         {
-            DisguiseRenderStream.SceneLoaded += RefreshInput;
-            DisguiseRenderStream.StreamsChanged += RefreshOutput;
+            DisguiseRenderStream.SceneLoaded += ForceSelectedUpdate;
+            DisguiseRenderStream.StreamsChanged += ForceSelectedUpdate;
         }
         
         void OnDisable()
         {
-            DisguiseRenderStream.SceneLoaded -= RefreshInput;
-            DisguiseRenderStream.StreamsChanged -= RefreshOutput;
+            DisguiseRenderStream.SceneLoaded -= ForceSelectedUpdate;
+            DisguiseRenderStream.StreamsChanged -= ForceSelectedUpdate;
         }
 
         void Update()
         {
-            Assert.IsNotNull(m_OutputPresenter);
-            Assert.IsNotNull(m_InputPresenter);
+            m_OutputPresenter.strategy = m_InputPresenter.strategy = PresenterStrategyToBlitStrategy(m_ResizeStrategy);
+            if (Selected == m_LastProcessSelected)
+            {
+                return;
+            }
 
-            if (VirtualIndexToOutputIndex(Selected) is { } outputIndex)
+            if (TryGetSelectedCameraCapture(out var selectedCamera))
             {
                 m_OutputPresenter.enabled = true;
                 m_InputPresenter.enabled = false;
-                m_OutputPresenter.cameraCapture = m_Outputs[outputIndex];
+                m_OutputPresenter.cameraCapture = selectedCamera;
             }
-            else if (VirtualIndexToInputIndex(Selected) is { } inputIndex)
+            else if (TryGetSelectedRenderTexture(out var renderTexture))
             {
                 m_InputPresenter.enabled = true;
                 m_OutputPresenter.enabled = false;
-                m_InputPresenter.source = m_Inputs[inputIndex];
+                m_InputPresenter.source = renderTexture;
             }
             else
             {
                 m_OutputPresenter.enabled = m_InputPresenter.enabled = false;
-                return;
             }
-            
-            m_OutputPresenter.strategy = m_InputPresenter.strategy = PresenterStrategyToBlitStrategy(m_ResizeStrategy);
+
+            m_LastProcessSelected = Selected;
         }
 
         /// <summary>
-        /// Maps a virtual index like <see cref="Selected"/> to a real index into <see cref="m_Outputs"/>.
-        /// The virtual list is described in <see cref="GetManagedRemoteParameters"/>.
+        /// Check if <see cref="Selected"/> correspond to a CameraCapture and finds it.
         /// </summary>
-        /// <returns>
-        /// An index into <see cref="m_Outputs"/>, or null when no output is selected.
-        /// </returns>
-        int? VirtualIndexToOutputIndex(int virtualIndex)
+        bool TryGetSelectedCameraCapture(out CameraCapture cameraCapture)
         {
-            var outputIndex = virtualIndex - 1;
-
-            if (outputIndex < 0 || outputIndex >= m_Outputs.Length)
-                return null;
-
-            return outputIndex;
-        }
-        
-        /// <summary>
-        /// Maps a virtual index like <see cref="Selected"/> to a real index into <see cref="m_Inputs"/>.
-        /// The virtual list is described in <see cref="GetManagedRemoteParameters"/>.
-        /// </summary>
-        /// <returns>
-        /// An index into <see cref="m_Inputs"/>, or null when no input is selected.
-        /// </returns>
-        int? VirtualIndexToInputIndex(int virtualIndex)
-        {
-            var inputIndex = virtualIndex - 1 - m_Outputs.Length;
-            
-            if (inputIndex < 0 || inputIndex >= m_Inputs.Length)
-                return null;
-            
-            return inputIndex;
-        }
-
-        void RefreshOutput()
-        {
-            m_Outputs = FindObjectsByType<DisguiseCameraCapture>(FindObjectsSortMode.InstanceID)
+            var cameraName = SelectedString;
+            var cameras = FindObjectsByType<DisguiseCameraCapture>(FindObjectsSortMode.InstanceID)
                 .Where(c => c.enabled) // Ignore disabled cameras
-                .Where(c => c.transform.parent)
-                .Select(x => x.GetComponent<CameraCapture>()) 
-                .OrderBy(x => x.transform.parent.name) // Sort by name of the parent (the original camera from which the stream camera was created)
-                .ToArray();
+                .Where(c => c.transform.parent) // CameraCapture are attached to cameras created as a child of the user created scene camera (which is the one that has the name we are searching for)
+                .Select(x => x.GetComponent<CameraCapture>())
+                .Where(x => x.transform.parent.name == cameraName).ToArray();
+            
+            if (cameras.Length > 0)
+            {
+                cameraCapture = cameras.First();
+                return true;
+            }
+
+            cameraCapture = null;
+            return false;
         }
-        
-        void RefreshInput()
+
+        /// <summary>
+        /// Check if <see cref="Selected"/> correspond to a <see cref="RenderTexture"/> <see cref="RemoteParameter"/>
+        /// and finds it.
+        /// </summary>
+        bool TryGetSelectedRenderTexture(out RenderTexture renderTexture)
         {
-            m_Inputs = DisguiseRenderStream.Instance.InputTextures.ToArray();
+            var renderTextureName = SelectedString;
+            int sceneIndex = gameObject.scene.buildIndex;
+            var fields = DisguiseRenderStream.Instance.GetFieldsOfScene(sceneIndex);
+            var selectedRenderTextureField = 
+                fields.images.FirstOrDefault(f => f.remoteParameter.displayName == renderTextureName);
+            renderTexture = selectedRenderTextureField?.GetValue() as RenderTexture;
+            return renderTexture != null;
+        }
+
+        void ForceSelectedUpdate()
+        {
+            m_LastProcessSelected = -1;
         }
     }
 }

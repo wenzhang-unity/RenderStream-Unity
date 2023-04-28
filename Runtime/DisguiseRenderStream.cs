@@ -35,7 +35,7 @@ namespace Disguise.RenderStream
                 return;
             }
 
-            string pathToBuiltProject = ApplicationPath.GetExecutablePath();;
+            string pathToBuiltProject = ApplicationPath.GetExecutablePath();
             RS_ERROR error = PluginEntry.instance.LoadSchema(pathToBuiltProject, out var schema);
             if (error != RS_ERROR.RS_ERROR_SUCCESS)
             {
@@ -111,8 +111,7 @@ namespace Disguise.RenderStream
                 ManagedRemoteParameter managedParameter = scene.parameters[j];
                 string key = managedParameter.key;
                 DisguiseRemoteParameters remoteParams = Array.Find(remoteParameters, rp => key.StartsWith(rp.prefix));
-                ObjectField field = new ObjectField();
-                field.target = remoteParams.exposedObject;
+                ObjectField field = new() {remoteParameter = managedParameter, target = remoteParams.exposedObject};
                 
                 if (key.EndsWith("_x"))
                 {
@@ -516,21 +515,6 @@ namespace Disguise.RenderStream
         public static Action StreamsChanged { get; set; } = delegate { };
 
         public StreamDescription[] Streams { get; private set; } = { };
-        
-        public IEnumerable<RenderTexture> InputTextures
-        {
-            get
-            {
-                if (LatestFrameData.scene > m_SceneFields.Length)
-                    return Enumerable.Empty<RenderTexture>();
-
-                var images = m_SceneFields[LatestFrameData.scene].images;
-                if (images == null)
-                    return Enumerable.Empty<RenderTexture>();
-
-                return images.Select(x => x.GetValue() as RenderTexture);
-            }
-        }
 
         public bool Awaiting { get; private set; }
 
@@ -540,6 +524,8 @@ namespace Disguise.RenderStream
         
         GameObject[] m_Cameras = { };
         ManagedSchema m_Schema = new ();
+        
+        public ManagedSchema Schema => m_Schema;
 
         public struct SceneFields
         {
@@ -549,6 +535,16 @@ namespace Disguise.RenderStream
         }
         
         SceneFields[] m_SceneFields;
+
+        public SceneFields GetFieldsOfScene(int index)
+        {
+            if (index >= m_SceneFields.Length)
+            {
+                return new();
+            }
+            return m_SceneFields[index];
+        }
+        
         DisguiseRenderStreamSettings m_Settings;
     }
 }
