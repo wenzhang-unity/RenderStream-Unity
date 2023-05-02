@@ -31,16 +31,16 @@ To use your Unity Project with disguise designer, you build an executable and im
 
 ## Optional: Cluster Rendering
 
-If you are running RenderStream in a cluster and you require deterministic rendering, you will also need to install the [Cluster Display](https://github.com/Unity-Technologies/ClusterDisplay) package to synchronize the nodes, using one of these methods:
+If you are running RenderStream in a cluster and you sychronization between nodes, you will also need to install the [Cluster Display](https://github.com/Unity-Technologies/ClusterDisplay) package, using one of these methods:
 
 * From the following git URL: https://github.com/Unity-Technologies/ClusterDisplay.git?path=/source/com.unity.cluster-display
 * Clone the repository and install the package locally from `path/to/repo/source/com.unity.cluster-display/package.json`
 
-The cluster is composed of one (1) emitter/leader plus one or more repeaters/followers. For example, if your cluster has 4 render nodes, then it has 1 emitter/leader + 3 repeaters/followers. It is important that you inform Unity of the number of repeaters in the cluster:
+The cluster is composed of one (1) emitter/controller plus one or more repeaters/followers. For example, if your cluster has 4 render nodes, then it has 1 emitter/controller + 3 repeaters/followers. It is important that you inform Unity of the number of repeaters in the cluster:
 
 * Before you build the project, can specify the number of repeaters in **Project Settings | Cluster Display** > **Repeater Count** (you can leave all other "Play in Editor" settings alone).
 ![Cluster settings](Docs~/images/cluster-settings.png)
-* Optionally, after you've built the project, you can also specify (or override) the repeater count in Designer by adding the following custom arguments in the "Engine Settings" of the Cluster Workload asset: `-followers`, `N` where `N` is the number of repeaters/followers in the cluster (1 less than the number of nodes).
+* Optionally, after you've built the project, you can also specify (or override) the repeater/follower count in Designer by adding the following custom arguments in the "Engine Settings" of the Cluster Workload asset: `-followers`, `N` where `N` is the number of repeaters/followers in the cluster (1 less than the number of nodes).
 ![Custom arguments](Docs~/images/custom-arguments.png)
 
 ## Notes:
